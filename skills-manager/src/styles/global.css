@@ -5,6 +5,12 @@
   --detail-panel-width: 380px;
   --sidebar-width: 260px;
   --header-height: 64px;
+
+  /* Layout colors using TDesign tokens */
+  --bg-deep: var(--td-bg-color-page);
+  --bg-primary: var(--td-bg-color-container);
+  --bg-secondary: var(--td-bg-color-secondarycontainer);
+  --border-subtle: var(--td-component-border);
 }
 
 /* Ensure full height layout */
