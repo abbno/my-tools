@@ -13,15 +13,15 @@
       <main class="panel-content">
         <!-- Description Section -->
         <section class="content-section">
-          <h3 class="section-title">DESCRIPTION</h3>
-          <p class="section-text">{{ skill.description }}</p>
+          <h3 class="section-title">描述</h3>
+          <p class="section-text">{{ skill.description || '暂无描述' }}</p>
         </section>
 
         <t-divider />
 
         <!-- Source Repository Section -->
         <section class="content-section">
-          <h3 class="section-title">SOURCE REPOSITORY</h3>
+          <h3 class="section-title">来源仓库</h3>
           <t-tag theme="primary" variant="light">{{ repoName }}</t-tag>
         </section>
 
@@ -29,15 +29,15 @@
 
         <!-- Path Section -->
         <section class="content-section">
-          <h3 class="section-title">PATH</h3>
+          <h3 class="section-title">路径</h3>
           <code class="path-code">{{ skill.path }}</code>
         </section>
 
         <!-- Preview Placeholder -->
         <section class="content-section">
-          <h3 class="section-title">SKILL.MD PREVIEW</h3>
+          <h3 class="section-title">SKILL.MD 预览</h3>
           <div class="preview-placeholder">
-            <t-loading text="Loading preview..." />
+            <t-loading text="加载预览中..." />
           </div>
         </section>
       </main>
@@ -46,11 +46,11 @@
       <footer class="panel-footer">
         <t-button theme="primary" @click="onOpenInEditor">
           <template #icon><BrowseIcon /></template>
-          Open in Editor
+          在编辑器中打开
         </t-button>
         <t-button theme="default" variant="outline" @click="onRefresh">
           <template #icon><RefreshIcon /></template>
-          Refresh
+          刷新
         </t-button>
       </footer>
     </div>

@@ -125,6 +125,7 @@ export interface UpdateInfo {
   releaseDate: string
   changelog: ChangelogItem[]
   downloadUrl: string
+  fullDownloadUrl: string // 完整下载地址，用于前端显示
   forceUpdate: boolean
 }
 

@@ -9,18 +9,37 @@ export const useUpdateStore = defineStore('update', () => {
   const checking = ref(false)
   const downloading = ref(false)
   const downloadProgress = ref(0)
+  const downloadComplete = ref(false)
   const updateInfo = ref<UpdateInfo | null>(null)
   const lastCheckTime = ref<string | null>(null)
   const showDialog = ref(false)
 
   // 事件监听器
   let unlistenProgress: UnlistenFn | null = null
+  let unlistenComplete: UnlistenFn | null = null
 
   // 初始化：监听下载进度事件
   async function init() {
-    unlistenProgress = await listen<DownloadProgress>('update-download-progress', (event) => {
-      downloadProgress.value = event.payload.percentage
-    })
+    console.log('[UpdateStore] 开始初始化事件监听器...')
+    try {
+      unlistenProgress = await listen<DownloadProgress>('update-download-progress', (event) => {
+        console.log('[UpdateStore] 收到下载进度事件:', event.payload.percentage, '%')
+        downloadProgress.value = event.payload.percentage
+        // 强制触发响应式更新
+        downloadProgress.value = Number(downloadProgress.value)
+      })
+
+      // 监听下载完成事件
+      unlistenComplete = await listen('update-download-complete', () => {
+        console.log('[UpdateStore] 收到下载完成事件')
+        downloadComplete.value = true
+        downloadProgress.value = 100
+      })
+
+      console.log('[UpdateStore] 事件监听器初始化完成')
+    } catch (error) {
+      console.error('[UpdateStore] 事件监听器初始化失败:', error)
+    }
 
     // 获取上次检查时间
     const time = await api.getLastCheckTime()
@@ -32,6 +51,10 @@ export const useUpdateStore = defineStore('update', () => {
     if (unlistenProgress) {
       unlistenProgress()
       unlistenProgress = null
+    }
+    if (unlistenComplete) {
+      unlistenComplete()
+      unlistenComplete = null
     }
   }
 
@@ -57,16 +80,30 @@ export const useUpdateStore = defineStore('update', () => {
 
   // 下载并安装更新
   async function downloadAndInstall() {
+    console.log('[UpdateStore] 开始下载更新...')
     downloading.value = true
     downloadProgress.value = 0
+    downloadComplete.value = false
+    console.log('[UpdateStore] 状态已设置: downloading=true, progress=0')
+
     try {
+      console.log('[UpdateStore] 调用 downloadAndInstallUpdate API...')
       await api.downloadAndInstallUpdate()
-      // 应用将退出，无需后续处理
+      console.log('[UpdateStore] downloadAndInstallUpdate API 调用完成')
+      // 下载完成事件会通过监听器触发 downloadComplete
+      // 等待一小段时间让安装程序启动，然后退出应用
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      // 退出应用
+      try {
+        console.log('[UpdateStore] 退出应用...')
+        await api.exitApp()
+      } catch (e) {
+        console.error('[UpdateStore] 退出应用失败:', e)
+      }
     } catch (error) {
-      console.error('下载安装更新失败:', error)
-      throw error
-    } finally {
+      console.error('[UpdateStore] 下载安装更新失败:', error)
       downloading.value = false
+      throw error
     }
   }
 
@@ -86,6 +123,7 @@ export const useUpdateStore = defineStore('update', () => {
     checking,
     downloading,
     downloadProgress,
+    downloadComplete,
     updateInfo,
     lastCheckTime,
     showDialog,

@@ -261,6 +261,10 @@ pub fn run() {
 
             db::init(&db_path).expect("数据库初始化失败");
 
+            // 初始化日志系统
+            utils::logger::init(utils::logger::get_log_dir());
+            utils::logger::info(&format!("应用启动，版本: {}", app_handle.package_info().version));
+
             // 清理超过30天的旧日志
             if let Ok(deleted) = db::cleanup_old_logs(30) {
                 if deleted > 0 {
@@ -413,6 +417,8 @@ pub fn run() {
             updater::check_update,
             updater::download_and_install_update,
             updater::get_last_check_time,
+            updater::get_version,
+            updater::exit_app,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

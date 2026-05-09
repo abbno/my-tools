@@ -1,16 +1,16 @@
 <template>
   <t-dialog
     v-model:visible="visible"
-    header="Git Not Installed"
+    header="Git 未安装"
     :width="480"
     :close-on-overlay-click="false"
     :close-on-esc-keydown="false"
     @close="onClose"
   >
-    <t-alert theme="warning" message="Git is not detected. Repository sync features will be unavailable." />
+    <t-alert theme="warning" message="未检测到 Git。仓库同步功能将不可用。" />
 
     <div class="install-guide">
-      <p class="guide-intro">Install Git and restart the application:</p>
+      <p class="guide-intro">安装 Git 并重启应用：</p>
 
       <div class="guide-grid">
         <div class="guide-item">
@@ -28,15 +28,15 @@
       </div>
 
       <t-link href="https://git-scm.com/downloads" target="_blank" hover="color">
-        Download Git Installer
+        下载 Git 安装程序
       </t-link>
     </div>
 
     <template #footer>
-      <t-button variant="outline" @click="onLater">Later</t-button>
+      <t-button variant="outline" @click="onLater">稍后</t-button>
       <t-button theme="primary" @click="onRecheck" :loading="checking">
         <template #icon><RefreshIcon /></template>
-        Recheck
+        重新检测
       </t-button>
     </template>
   </t-dialog>
@@ -62,13 +62,13 @@ async function onRecheck() {
     if (status.installed) {
       visible.value = false
       emit('installed')
-      MessagePlugin.success('Git is now installed!')
+      MessagePlugin.success('Git 检测成功！')
     } else {
-      MessagePlugin.warning('Git is still not detected. Please install Git first.')
+      MessagePlugin.warning('仍未检测到 Git。请先安装 Git。')
     }
   } catch (error) {
-    console.error('Check failed:', error)
-    MessagePlugin.error('Failed to check Git installation.')
+    console.error('检测失败:', error)
+    MessagePlugin.error('Git 检测失败。')
   } finally {
     checking.value = false
   }

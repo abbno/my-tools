@@ -488,6 +488,7 @@ interface UpdateInfoDto {
   release_date: string
   changelog: Array<{ type: string; description: string }>
   download_url: string
+  full_download_url: string
   force_update: boolean
 }
 
@@ -500,6 +501,7 @@ function updateInfoDtoToUpdateInfo(dto: UpdateInfoDto): UpdateInfo {
       description: item.description,
     })),
     downloadUrl: dto.download_url,
+    fullDownloadUrl: dto.full_download_url,
     forceUpdate: dto.force_update,
   }
 }
@@ -525,6 +527,20 @@ export async function downloadAndInstallUpdate(): Promise<void> {
  */
 export async function getLastCheckTime(): Promise<string | null> {
   return await invoke<string | null>('get_last_check_time')
+}
+
+/**
+ * 获取应用版本号
+ */
+export async function getVersion(): Promise<string> {
+  return await invoke<string>('get_version')
+}
+
+/**
+ * 退出应用
+ */
+export async function exitApp(): Promise<void> {
+  await invoke('exit_app')
 }
 
 // ============================================

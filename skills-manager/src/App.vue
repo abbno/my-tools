@@ -10,7 +10,7 @@
         <div class="header-actions">
           <t-input
             v-model="searchQuery"
-            placeholder="Search skills..."
+            placeholder="搜索技能..."
             clearable
             class="search-input"
             @input="onSearch"
@@ -34,7 +34,7 @@
       <!-- Sidebar -->
       <t-aside class="app-aside">
         <div class="aside-header">
-          <span class="aside-label">REPOSITORIES</span>
+          <span class="aside-label">仓库列表</span>
           <div class="aside-actions">
             <t-button
               variant="outline"
@@ -43,7 +43,7 @@
               @click="onSyncAll"
             >
               <refresh-icon />
-              Sync All
+              同步全部
             </t-button>
             <t-button
               variant="outline"
@@ -51,7 +51,7 @@
               @click="showAddRepo = true"
             >
               <add-icon />
-              Add
+              添加
             </t-button>
           </div>
         </div>
@@ -100,7 +100,7 @@
             <template #icon>
               <setting-icon />
             </template>
-            Settings
+            设置
           </t-menu-item>
         </t-menu>
 
@@ -110,13 +110,13 @@
           class="empty-repos"
         >
           <span class="empty-icon">◇</span>
-          <p>No repositories</p>
+          <p>暂无仓库</p>
           <t-button
             variant="outline"
             size="small"
             @click="showAddRepo = true"
           >
-            Add First Repo
+            添加第一个仓库
           </t-button>
         </div>
       </t-aside>

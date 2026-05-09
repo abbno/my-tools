@@ -9,14 +9,15 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import { useUpdateStore } from '@/stores/update'
 import UpdateDialog from '@/components/UpdateDialog.vue'
+import { getVersion } from '@/api/tauri'
 
 // TDesign 全局配置
 const globalConfig = {
   classPrefix: 't'
 }
 
-// 当前版本号（从 package.json 或配置获取）
-const currentVersion = ref('0.1.0')
+// 当前版本号（从后端获取）
+const currentVersion = ref('')
 
 // 更新 store
 const updateStore = useUpdateStore()
@@ -27,6 +28,13 @@ let checkTimer: number | null = null
 
 // 组件挂载时初始化
 onMounted(async () => {
+  // 获取版本号
+  try {
+    currentVersion.value = await getVersion()
+  } catch (error) {
+    console.error('获取版本号失败:', error)
+  }
+
   // 初始化更新 store
   await updateStore.init()
 

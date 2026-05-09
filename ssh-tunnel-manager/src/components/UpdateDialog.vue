@@ -40,11 +40,16 @@
 
       <!-- 下载进度 -->
       <div v-if="downloading" class="progress-section">
-        <div class="progress-label">下载进度：</div>
+        <div class="progress-label">
+          {{ downloadComplete ? '下载完成，正在安装...' : '下载进度：' }}
+        </div>
         <t-progress
           :percentage="downloadProgress"
-          :theme="downloadProgress >= 100 ? 'success' : 'default'"
+          :theme="downloadComplete ? 'success' : 'default'"
         />
+        <div v-if="downloadComplete" class="install-tip">
+          安装程序已启动，应用即将退出...
+        </div>
       </div>
 
       <!-- 手动下载链接 -->
@@ -53,11 +58,11 @@
           如下载失败，可手动下载：
         </div>
         <a
-          :href="updateInfo?.downloadUrl"
+          :href="updateInfo?.fullDownloadUrl"
           target="_blank"
           class="download-link"
         >
-          {{ updateInfo?.downloadUrl }}
+          {{ updateInfo?.fullDownloadUrl }}
         </a>
       </div>
     </div>
@@ -80,12 +85,20 @@
           立即更新
         </t-button>
         <t-button
-          v-if="downloading"
+          v-if="downloading && !downloadComplete"
           theme="primary"
           loading
           disabled
         >
-          下载安装中...
+          下载中...
+        </t-button>
+        <t-button
+          v-if="downloadComplete"
+          theme="success"
+          loading
+          disabled
+        >
+          安装中...
         </t-button>
       </div>
     </template>
@@ -121,6 +134,7 @@ const visible = computed({
 const updateInfo = computed(() => updateStore.updateInfo)
 const downloading = computed(() => updateStore.downloading)
 const downloadProgress = computed(() => updateStore.downloadProgress)
+const downloadComplete = computed(() => updateStore.downloadComplete)
 
 // 是否显示手动下载链接（下载失败后显示）
 const showManualDownload = ref(false)
@@ -246,6 +260,12 @@ async function handleUpdateNow() {
 .progress-label {
   color: var(--td-text-color-secondary);
   margin-bottom: 8px;
+}
+
+.install-tip {
+  margin-top: 8px;
+  color: var(--td-success-color);
+  font-size: 12px;
 }
 
 .manual-download {

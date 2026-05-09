@@ -78,13 +78,13 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useUpdateStore } from '@/stores/update'
-import { getAppSetting, saveAppSetting, deleteAppSetting } from '@/api/tauri'
+import { getAppSetting, saveAppSetting, deleteAppSetting, getVersion } from '@/api/tauri'
 
 const router = useRouter()
 const updateStore = useUpdateStore()
 
-// 当前版本号
-const currentVersion = ref('0.1.0')
+// 当前版本号（从后端获取）
+const currentVersion = ref('')
 
 // 更新服务器配置
 const updateServerUrl = ref('')
@@ -171,8 +171,12 @@ function handleBack() {
 
 // 初始化
 onMounted(async () => {
-  // 从 package.json 获取版本号（实际项目中可能需要从后端获取）
-  // 这里使用固定版本号
+  // 从后端获取版本号
+  try {
+    currentVersion.value = await getVersion()
+  } catch (error) {
+    console.error('获取版本号失败:', error)
+  }
 
   // 加载更新服务器配置
   try {

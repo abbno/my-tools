@@ -19,7 +19,7 @@
     </template>
 
     <div class="skill-description">
-      {{ skill.description || 'No description available' }}
+      {{ skill.description || '暂无描述' }}
     </div>
 
     <template #footer>

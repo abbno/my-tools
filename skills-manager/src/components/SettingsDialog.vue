@@ -1,7 +1,7 @@
 <template>
   <t-dialog
     v-model:visible="visible"
-    header="Settings"
+    header="设置"
     :width="600"
     :footer="false"
     destroy-on-close
@@ -9,11 +9,11 @@
     <div class="settings-content">
       <!-- Agent Configuration Section -->
       <section class="settings-section">
-        <h3 class="section-title">Agent Configuration</h3>
+        <h3 class="section-title">Agent 配置</h3>
         <t-divider />
 
         <div v-if="!configStore.config?.agents?.length" class="empty-state">
-          <p>No agents configured</p>
+          <p>暂无已配置的 Agent</p>
         </div>
 
         <div v-else class="agent-list">
@@ -38,15 +38,15 @@
 
       <!-- Sync Settings Section -->
       <section class="settings-section">
-        <h3 class="section-title">Sync Settings</h3>
+        <h3 class="section-title">同步设置</h3>
         <t-divider />
 
         <div class="settings-form">
           <!-- Auto Sync -->
           <div class="form-row">
             <div class="form-info">
-              <span class="form-label">Auto Sync</span>
-              <span class="form-desc">Automatically synchronize repositories</span>
+              <span class="form-label">自动同步</span>
+              <span class="form-desc">自动同步仓库</span>
             </div>
             <t-switch
               :value="configStore.config?.settings.auto_sync"
@@ -57,8 +57,8 @@
           <!-- Sync Interval -->
           <div class="form-row">
             <div class="form-info">
-              <span class="form-label">Default Sync Interval</span>
-              <span class="form-desc">Frequency for automatic synchronization</span>
+              <span class="form-label">默认同步间隔</span>
+              <span class="form-desc">自动同步的频率</span>
             </div>
             <t-select
               :value="configStore.config?.settings.default_sync_interval || 3600"
@@ -78,13 +78,13 @@
           <img src="/app-icon.svg" alt="Skills Manager" class="about-icon" />
           <span class="about-name">Skills Manager</span>
         </div>
-        <p class="about-version">Version 0.1.0</p>
-        <p class="about-desc">A curated knowledge management system for AI agents</p>
+        <p class="about-version">版本 0.1.0</p>
+        <p class="about-desc">AI Agent 的知识管理系统</p>
       </section>
 
       <!-- Footer -->
       <div class="dialog-footer">
-        <t-button theme="primary" @click="visible = false">Close</t-button>
+        <t-button theme="primary" @click="visible = false">关闭</t-button>
       </div>
     </div>
   </t-dialog>
@@ -97,14 +97,14 @@ const configStore = useConfigStore()
 const visible = defineModel<boolean>('visible', { default: false })
 
 const syncIntervalOptions = [
-  { label: '5 minutes', value: 300 },
-  { label: '15 minutes', value: 900 },
-  { label: '30 minutes', value: 1800 },
-  { label: '1 hour', value: 3600 },
-  { label: '2 hours', value: 7200 },
-  { label: '6 hours', value: 21600 },
-  { label: '12 hours', value: 43200 },
-  { label: 'Daily', value: 86400 },
+  { label: '5 分钟', value: 300 },
+  { label: '15 分钟', value: 900 },
+  { label: '30 分钟', value: 1800 },
+  { label: '1 小时', value: 3600 },
+  { label: '2 小时', value: 7200 },
+  { label: '6 小时', value: 21600 },
+  { label: '12 小时', value: 43200 },
+  { label: '每天', value: 86400 },
 ]
 </script>
 

@@ -1,7 +1,7 @@
 <template>
   <t-dialog
     v-model:visible="visible"
-    header="Skill Conflict"
+    header="技能冲突"
     :width="440"
     :footer="false"
     :close-btn="true"
@@ -9,10 +9,10 @@
   >
     <div class="conflict-content">
       <t-alert theme="warning">
-        Found duplicate skill: <strong>{{ conflict.skillName }}</strong>
+        发现重复技能： <strong>{{ conflict.skillName }}</strong>
       </t-alert>
 
-      <p class="conflict-intro">This skill already exists. Choose how to handle it:</p>
+      <p class="conflict-intro">该技能已存在。请选择处理方式：</p>
 
       <t-radio-group v-model="selectedOption" class="options-group">
         <div
@@ -33,8 +33,8 @@
 
     <template #footer>
       <div class="dialog-footer">
-        <t-button variant="outline" @click="onClose">Cancel</t-button>
-        <t-button theme="primary" @click="onConfirm">Confirm</t-button>
+        <t-button variant="outline" @click="onClose">取消</t-button>
+        <t-button theme="primary" @click="onConfirm">确认</t-button>
       </div>
     </template>
   </t-dialog>
@@ -66,18 +66,18 @@ const emit = defineEmits<{
 const options = computed(() => [
   {
     id: 'existing' as const,
-    label: `Keep existing (${props.conflict.existingRepoName})`,
-    description: 'Do not replace, keep the current version',
+    label: `保留现有版本 (${props.conflict.existingRepoName})`,
+    description: '不替换，保留当前版本',
   },
   {
     id: 'new' as const,
-    label: `Use new version (${props.conflict.newRepoName})`,
-    description: 'Replace with the new repository version',
+    label: `使用新版本 (${props.conflict.newRepoName})`,
+    description: '替换为新仓库版本',
   },
   {
     id: 'skip' as const,
-    label: 'Skip this skill',
-    description: 'Do not deploy this skill',
+    label: '跳过此技能',
+    description: '不部署此技能',
   },
 ])
 

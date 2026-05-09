@@ -14,14 +14,14 @@
 
     <!-- Empty state -->
     <div v-else class="empty-state">
-      <t-empty description="No skills found">
+      <t-empty description="暂无技能">
         <template #action>
           <t-button
             v-if="!configStore.config?.repositories?.length"
             theme="primary"
             @click="emit('addRepo')"
           >
-            Add First Repository
+            添加第一个仓库
           </t-button>
         </template>
       </t-empty>

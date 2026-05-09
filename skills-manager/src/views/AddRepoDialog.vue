@@ -2,60 +2,60 @@
   <t-dialog
     v-model:visible="visible"
     width="600px"
-    :header="'Add Repository'"
+    :header="'添加仓库'"
     :confirm-btn="null"
     :cancel-btn="null"
     @close="onClose"
   >
     <!-- Steps indicator -->
     <t-steps :current="currentStep" class="steps-indicator">
-      <t-step-item title="Repository Info" />
-      <t-step-item title="Select Skills" />
-      <t-step-item title="Confirm" />
+      <t-step-item title="仓库信息" />
+      <t-step-item title="选择技能" />
+      <t-step-item title="确认" />
     </t-steps>
 
     <!-- Step 0: Input form -->
     <div v-if="currentStep === 0" class="step-content">
       <t-form :data="formData" :rules="formRules" ref="formRef" label-align="top">
-        <t-form-item label="Repository Name" name="name">
-          <t-input v-model="formData.name" placeholder="My Skills Repo" />
+        <t-form-item label="仓库名称" name="name">
+          <t-input v-model="formData.name" placeholder="我的技能仓库" />
         </t-form-item>
 
-        <t-form-item label="Repository URL" name="url">
+        <t-form-item label="仓库 URL" name="url">
           <t-input v-model="formData.url" placeholder="https://github.com/user/skills-repo" />
         </t-form-item>
 
-        <t-form-item label="Authentication">
+        <t-form-item label="认证方式">
           <t-select v-model="formData.authType">
-            <t-option value="none" label="None Required" />
-            <t-option value="token" label="Token" />
-            <t-option value="username-password" label="Username & Password" />
+            <t-option value="none" label="无需认证" />
+            <t-option value="token" label="令牌" />
+            <t-option value="username-password" label="用户名和密码" />
           </t-select>
         </t-form-item>
 
-        <t-form-item v-if="formData.authType === 'token'" label="Access Token">
+        <t-form-item v-if="formData.authType === 'token'" label="访问令牌">
           <t-input v-model="formData.token" type="password" placeholder="ghp_xxx or glpat_xxx" />
         </t-form-item>
 
         <template v-if="formData.authType === 'username-password'">
-          <t-form-item label="Username">
-            <t-input v-model="formData.username" placeholder="Username" />
+          <t-form-item label="用户名">
+            <t-input v-model="formData.username" placeholder="用户名" />
           </t-form-item>
-          <t-form-item label="Password">
-            <t-input v-model="formData.password" type="password" placeholder="Password" />
+          <t-form-item label="密码">
+            <t-input v-model="formData.password" type="password" placeholder="密码" />
           </t-form-item>
         </template>
 
-        <t-form-item label="Sync Interval">
+        <t-form-item label="同步间隔">
           <t-select v-model="formData.syncInterval">
-            <t-option value="300" label="5 minutes" />
-            <t-option value="900" label="15 minutes" />
-            <t-option value="1800" label="30 minutes" />
-            <t-option value="3600" label="1 hour" />
-            <t-option value="7200" label="2 hours" />
-            <t-option value="21600" label="6 hours" />
-            <t-option value="43200" label="12 hours" />
-            <t-option value="86400" label="Daily" />
+            <t-option value="300" label="5 分钟" />
+            <t-option value="900" label="15 分钟" />
+            <t-option value="1800" label="30 分钟" />
+            <t-option value="3600" label="1 小时" />
+            <t-option value="7200" label="2 小时" />
+            <t-option value="21600" label="6 小时" />
+            <t-option value="43200" label="12 小时" />
+            <t-option value="86400" label="每天" />
           </t-select>
         </t-form-item>
       </t-form>
@@ -64,7 +64,7 @@
     <!-- Step 1: Preview skills -->
     <div v-if="currentStep === 1" class="step-content">
       <div v-if="loading" class="loading-container">
-        <t-loading text="Fetching skills from repository..." />
+        <t-loading text="正在获取仓库中的技能..." />
       </div>
 
       <t-alert v-else-if="error" theme="error" :message="error">
@@ -75,9 +75,9 @@
 
       <div v-else class="skills-panel">
         <div class="skills-header">
-          <span>{{ skills.length }} skills found</span>
+          <span>{{ skills.length }} 个技能</span>
           <t-link theme="primary" @click="selectAll">
-            {{ selectedSkills.length === skills.length ? 'Deselect All' : 'Select All' }}
+            {{ selectedSkills.length === skills.length ? '取消全选' : '全选' }}
           </t-link>
         </div>
         <t-checkbox-group v-model="selectedSkills" class="skills-list">
@@ -89,7 +89,7 @@
           >
             <div class="skill-info">
               <span class="skill-name">{{ skill.name }}</span>
-              <span class="skill-desc">{{ skill.description || 'No description' }}</span>
+              <span class="skill-desc">{{ skill.description || '暂无描述' }}</span>
             </div>
           </t-checkbox>
         </t-checkbox-group>
@@ -98,18 +98,18 @@
 
     <!-- Step 2: Summary -->
     <div v-if="currentStep === 2" class="step-content">
-      <t-descriptions title="Summary" :column="2" bordered>
-        <t-descriptions-item label="Name">{{ formData.name }}</t-descriptions-item>
-        <t-descriptions-item label="URL" :span="2">
+      <t-descriptions title="汇总" :column="2" bordered>
+        <t-descriptions-item label="名称">{{ formData.name }}</t-descriptions-item>
+        <t-descriptions-item label="地址" :span="2">
           <code class="url-code">{{ formData.url }}</code>
         </t-descriptions-item>
-        <t-descriptions-item label="Auth">
+        <t-descriptions-item label="认证">
           <t-tag theme="primary" variant="light">
-            {{ formData.authType === 'none' ? 'None' : formData.authType === 'token' ? 'Token' : 'User/Pass' }}
+            {{ formData.authType === 'none' ? '无' : formData.authType === 'token' ? '令牌' : '用户/密码' }}
           </t-tag>
         </t-descriptions-item>
-        <t-descriptions-item label="Sync">{{ syncIntervalLabel }}</t-descriptions-item>
-        <t-descriptions-item label="Skills Selected" :span="2">
+        <t-descriptions-item label="同步">{{ syncIntervalLabel }}</t-descriptions-item>
+        <t-descriptions-item label="已选技能" :span="2">
           <div class="selected-skills">
             <t-tag
               v-for="path in selectedSkills.slice(0, 5)"
@@ -120,7 +120,7 @@
               {{ getSkillName(path) }}
             </t-tag>
             <t-tag v-if="selectedSkills.length > 5" theme="primary" variant="light">
-              +{{ selectedSkills.length - 5 }} more
+              +{{ selectedSkills.length - 5 }} 更多
             </t-tag>
           </div>
         </t-descriptions-item>
@@ -131,10 +131,10 @@
     <template #footer>
       <div class="dialog-footer">
         <t-button variant="outline" @click="onCancel">
-          {{ currentStep === 0 ? 'Cancel' : 'Back' }}
+          {{ currentStep === 0 ? '取消' : '返回' }}
         </t-button>
         <t-button theme="primary" @click="onConfirm">
-          {{ currentStep === 2 ? 'Save Repository' : 'Continue' }}
+          {{ currentStep === 2 ? '保存仓库' : '继续' }}
         </t-button>
       </div>
     </template>
@@ -176,16 +176,16 @@ const formRules = {
 
 const syncIntervalLabel = computed(() => {
   const labels: Record<string, string> = {
-    '300': '5 min',
-    '900': '15 min',
-    '1800': '30 min',
-    '3600': '1 hour',
-    '7200': '2 hours',
-    '21600': '6 hours',
-    '43200': '12 hours',
-    '86400': 'Daily',
+    '300': '5 分钟',
+    '900': '15 分钟',
+    '1800': '30 分钟',
+    '3600': '1 小时',
+    '7200': '2 小时',
+    '21600': '6 小时',
+    '43200': '12 小时',
+    '86400': '每天',
   }
-  return labels[formData.value.syncInterval] || '1 hour'
+  return labels[formData.value.syncInterval] || '1 小时'
 })
 
 // Reset state when dialog opens
@@ -253,7 +253,7 @@ async function onConfirm() {
     await fetchSkillsPreview()
   } else if (currentStep.value === 1) {
     if (selectedSkills.value.length === 0) {
-      MessagePlugin.warning('Please select at least one skill')
+      MessagePlugin.warning('请至少选择一个技能')
       return
     }
     currentStep.value = 2
@@ -274,7 +274,7 @@ async function onConfirm() {
       last_sync: null,
       enabled: true,
     })
-    MessagePlugin.success('Repository added successfully')
+    MessagePlugin.success('仓库添加成功')
     visible.value = false
   }
 }
