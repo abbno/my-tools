@@ -1,73 +1,76 @@
 <template>
   <t-dialog
     v-model:visible="visible"
-    header="Git 未安装"
-    :confirm-btn="null"
-    :cancel-btn="null"
-    width="500px"
+    header="Git Not Installed"
+    :width="480"
+    :close-on-overlay-click="false"
+    :close-on-esc-keydown="false"
     @close="onClose"
   >
-    <t-space direction="vertical" size="large">
-      <t-alert theme="warning" message="Git 未检测到，仓库同步功能将无法使用" />
+    <t-alert theme="warning" message="Git is not detected. Repository sync features will be unavailable." />
 
-      <div class="install-guide">
-        <t-text>请安装 Git 后重新启动应用：</t-text>
+    <div class="install-guide">
+      <p class="guide-intro">Install Git and restart the application:</p>
 
-        <t-divider />
-
-        <div class="platform-guide">
-          <t-text strong>Windows:</t-text>
-          <t-code>winget install Git.Git</t-code>
+      <div class="guide-grid">
+        <div class="guide-item">
+          <t-tag variant="light" theme="default">Windows</t-tag>
+          <code class="guide-code">winget install Git.Git</code>
         </div>
-
-        <div class="platform-guide">
-          <t-text strong>macOS:</t-text>
-          <t-code>brew install git</t-code>
+        <div class="guide-item">
+          <t-tag variant="light" theme="default">macOS</t-tag>
+          <code class="guide-code">brew install git</code>
         </div>
-
-        <div class="platform-guide">
-          <t-text strong>Linux (Debian/Ubuntu):</t-text>
-          <t-code>sudo apt install git</t-code>
+        <div class="guide-item">
+          <t-tag variant="light" theme="default">Linux</t-tag>
+          <code class="guide-code">sudo apt install git</code>
         </div>
-
-        <t-divider />
-
-        <t-link href="https://git-scm.com/downloads" target="_blank">
-          下载 Git 安装包
-        </t-link>
       </div>
 
-      <t-space>
-        <t-button variant="outline" @click="onLater">稍后安装</t-button>
-        <t-button theme="primary" @click="onRecheck">已安装，重新检测</t-button>
-      </t-space>
-    </t-space>
+      <t-link href="https://git-scm.com/downloads" target="_blank" hover="color">
+        Download Git Installer
+      </t-link>
+    </div>
+
+    <template #footer>
+      <t-button variant="outline" @click="onLater">Later</t-button>
+      <t-button theme="primary" @click="onRecheck" :loading="checking">
+        <template #icon><RefreshIcon /></template>
+        Recheck
+      </t-button>
+    </template>
   </t-dialog>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { checkGitInstalled } from '@/api/tauri'
 import { MessagePlugin } from 'tdesign-vue-next'
+import { RefreshIcon } from 'tdesign-icons-vue-next'
+import { checkGitInstalled } from '@/api/tauri'
 
 const visible = ref(true)
+const checking = ref(false)
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'installed'): void
 }>()
 
 async function onRecheck() {
+  checking.value = true
   try {
     const status = await checkGitInstalled()
     if (status.installed) {
-      MessagePlugin.success('Git 已安装: ' + status.version)
       visible.value = false
       emit('installed')
+      MessagePlugin.success('Git is now installed!')
     } else {
-      MessagePlugin.warning('Git 仍未检测到，请确认安装后重试')
+      MessagePlugin.warning('Git is still not detected. Please install Git first.')
     }
   } catch (error) {
-    MessagePlugin.error('检测失败: ' + error)
+    console.error('Check failed:', error)
+    MessagePlugin.error('Failed to check Git installation.')
+  } finally {
+    checking.value = false
   }
 }
 
@@ -83,13 +86,35 @@ function onClose() {
 
 <style scoped>
 .install-guide {
-  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-comp-margin-l);
+  margin-top: var(--td-comp-margin-l);
 }
 
-.platform-guide {
-  margin: 12px 0;
+.guide-intro {
+  font-size: var(--td-font-size-body-medium);
+  color: var(--td-text-color-secondary);
+}
+
+.guide-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--td-comp-margin-m);
+}
+
+.guide-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--td-comp-margin-l);
+}
+
+.guide-code {
+  font-family: var(--td-font-family-mono);
+  font-size: var(--td-font-size-body-small);
+  color: var(--td-text-color-primary);
+  background: var(--td-bg-color-container);
+  padding: var(--td-comp-paddingTB-xs) var(--td-comp-paddingLR-s);
+  border-radius: var(--td-radius-default);
 }
 </style>
