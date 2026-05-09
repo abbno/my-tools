@@ -134,10 +134,7 @@
     @close="showGitDialog = false"
     @installed="showGitDialog = false"
   />
-  <AddRepoDialog
-    v-if="showAddRepo"
-    @close="showAddRepo = false"
-  />
+  <AddRepoDialog v-model:visible="showAddRepo" />
   <SettingsDialog
     v-if="showSettings"
     @close="showSettings = false"
