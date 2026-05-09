@@ -61,7 +61,7 @@
           @change="onRepoChange"
           class="repo-menu"
         >
-          <t-menu-group title="Repositories">
+          <t-menu-group title="仓库">
             <t-menu-item
               v-for="repo in configStore.config?.repositories || []"
               :key="repo.id"
