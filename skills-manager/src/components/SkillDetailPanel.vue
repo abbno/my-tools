@@ -13,25 +13,29 @@
       <main class="panel-content">
         <!-- Description Section -->
         <section class="content-section">
-          <h3 class="section-title">Description</h3>
+          <h3 class="section-title">DESCRIPTION</h3>
           <p class="section-text">{{ skill.description }}</p>
         </section>
 
+        <t-divider />
+
         <!-- Source Repository Section -->
         <section class="content-section">
-          <h3 class="section-title">Source Repository</h3>
+          <h3 class="section-title">SOURCE REPOSITORY</h3>
           <t-tag theme="primary" variant="light">{{ repoName }}</t-tag>
         </section>
 
+        <t-divider />
+
         <!-- Path Section -->
         <section class="content-section">
-          <h3 class="section-title">Path</h3>
+          <h3 class="section-title">PATH</h3>
           <code class="path-code">{{ skill.path }}</code>
         </section>
 
         <!-- Preview Placeholder -->
         <section class="content-section">
-          <h3 class="section-title">Preview</h3>
+          <h3 class="section-title">SKILL.MD PREVIEW</h3>
           <div class="preview-placeholder">
             <t-loading text="Loading preview..." />
           </div>
