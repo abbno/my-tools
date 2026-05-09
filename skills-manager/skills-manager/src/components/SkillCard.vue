@@ -4,7 +4,12 @@
     :class="['skill-card', { selected: selected }]"
     :bordered="true"
     :hover-shadow="true"
+    role="button"
+    :aria-selected="selected"
+    tabindex="0"
     @click="onClick"
+    @keydown.enter="onClick"
+    @keydown.space.prevent="onClick"
   >
     <template #header>
       <div class="card-header">
@@ -51,6 +56,16 @@ function onClick() {
 
 .skill-card:hover {
   transform: translateY(-2px);
+}
+
+.skill-card.selected {
+  border-color: var(--td-brand-color);
+  box-shadow: 0 0 0 2px var(--td-brand-color-focus);
+}
+
+.skill-card:focus-visible {
+  outline: 2px solid var(--td-brand-color);
+  outline-offset: 2px;
 }
 
 .card-header {
