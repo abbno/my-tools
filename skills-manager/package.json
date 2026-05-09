@@ -14,6 +14,7 @@
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
     "pinia": "^2.1.7",
+    "tdesign-icons-vue-next": "^0.4.4",
     "tdesign-vue-next": "^1.9.3",
     "uuid": "^14.0.0",
     "vue": "^3.4.21",
