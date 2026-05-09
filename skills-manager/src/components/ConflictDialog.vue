@@ -1,28 +1,42 @@
 <template>
   <t-dialog
     v-model:visible="visible"
-    header="技能冲突"
-    width="500px"
-    :confirm-btn="null"
-    :cancel-btn="null"
+    header="Skill Conflict"
+    :width="440"
+    :footer="false"
+    :close-btn="true"
     @close="onClose"
   >
-    <t-space direction="vertical" size="large">
-      <t-alert theme="warning" :message="`发现同名技能: ${conflict.skillName}`" />
+    <div class="conflict-content">
+      <t-alert theme="warning">
+        Found duplicate skill: <strong>{{ conflict.skillName }}</strong>
+      </t-alert>
 
-      <t-text>该技能已在以下位置存在，请选择如何处理：</t-text>
+      <p class="conflict-intro">This skill already exists. Choose how to handle it:</p>
 
-      <t-list>
-        <t-list-item v-for="option in options" :key="option.id">
-          <t-list-item-meta :title="option.label" :description="option.description" />
-          <template #action>
-            <t-button size="small" @click="onSelect(option.id)">
-              选择
-            </t-button>
-          </template>
-        </t-list-item>
-      </t-list>
-    </t-space>
+      <t-radio-group v-model="selectedOption" class="options-group">
+        <div
+          v-for="option in options"
+          :key="option.id"
+          class="option-item"
+          @click="selectedOption = option.id"
+        >
+          <t-radio :value="option.id">
+            <div class="option-content">
+              <span class="option-label">{{ option.label }}</span>
+              <span class="option-desc">{{ option.description }}</span>
+            </div>
+          </t-radio>
+        </div>
+      </t-radio-group>
+    </div>
+
+    <template #footer>
+      <div class="dialog-footer">
+        <t-button variant="outline" @click="onClose">Cancel</t-button>
+        <t-button theme="primary" @click="onConfirm">Confirm</t-button>
+      </div>
+    </template>
   </t-dialog>
 </template>
 
@@ -38,6 +52,8 @@ interface ConflictInfo {
 }
 
 const visible = ref(true)
+const selectedOption = ref<'existing' | 'new' | 'skip'>('existing')
+
 const props = defineProps<{
   conflict: ConflictInfo
 }>()
@@ -49,25 +65,25 @@ const emit = defineEmits<{
 
 const options = computed(() => [
   {
-    id: 'existing',
-    label: `保留现有版本 (${props.conflict.existingRepoName})`,
-    description: '不替换现有技能，保持原版本',
+    id: 'existing' as const,
+    label: `Keep existing (${props.conflict.existingRepoName})`,
+    description: 'Do not replace, keep the current version',
   },
   {
-    id: 'new',
-    label: `使用新版本 (${props.conflict.newRepoName})`,
-    description: '替换现有技能为新仓库版本',
+    id: 'new' as const,
+    label: `Use new version (${props.conflict.newRepoName})`,
+    description: 'Replace with the new repository version',
   },
   {
-    id: 'skip',
-    label: '跳过此技能',
-    description: '不部署此技能',
+    id: 'skip' as const,
+    label: 'Skip this skill',
+    description: 'Do not deploy this skill',
   },
 ])
 
-function onSelect(choice: string) {
+function onConfirm() {
   visible.value = false
-  emit('select', choice as 'existing' | 'new' | 'skip')
+  emit('select', selectedOption.value)
 }
 
 function onClose() {
@@ -76,4 +92,57 @@ function onClose() {
 </script>
 
 <style scoped>
+.conflict-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.conflict-intro {
+  margin: 0;
+  color: var(--td-text-color-secondary);
+  font-size: 14px;
+}
+
+.options-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option-item {
+  padding: 12px;
+  background: var(--td-bg-color-container);
+  border: 1px solid var(--td-component-border);
+  border-radius: var(--td-radius-default);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.option-item:hover {
+  border-color: var(--td-brand-color);
+  background: var(--td-bg-color-container-hover);
+}
+
+.option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.option-label {
+  font-weight: 500;
+  color: var(--td-text-color-primary);
+}
+
+.option-desc {
+  font-size: 12px;
+  color: var(--td-text-color-placeholder);
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
 </style>
