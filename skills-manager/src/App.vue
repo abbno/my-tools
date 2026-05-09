@@ -93,6 +93,15 @@
               </template>
             </t-menu-item>
           </t-menu-group>
+
+          <t-divider />
+
+          <t-menu-item value="settings" @click="showSettings = true">
+            <template #icon>
+              <setting-icon />
+            </template>
+            Settings
+          </t-menu-item>
         </t-menu>
 
         <!-- Empty state -->
