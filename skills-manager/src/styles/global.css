@@ -1,0 +1,47 @@
+/* skills-manager/src/styles/global.css */
+
+/* CSS Variables for custom values not in TDesign */
+:root {
+  --detail-panel-width: 380px;
+  --sidebar-width: 260px;
+  --header-height: 64px;
+}
+
+/* Ensure full height layout */
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Skill card grid layout */
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 16px;
+}
+
+/* Detail panel slide animation */
+.detail-panel {
+  position: fixed;
+  top: var(--header-height);
+  right: 0;
+  width: var(--detail-panel-width);
+  height: calc(100vh - var(--header-height));
+  background: var(--td-bg-color-container);
+  border-left: 1px solid var(--td-component-border);
+  transition: transform 0.3s ease;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.detail-panel.hidden {
+  transform: translateX(100%);
+}
+
+/* Card selected state */
+.skill-card.selected {
+  border-color: var(--td-brand-color);
+  box-shadow: 0 0 0 2px var(--td-brand-color-focus);
+}

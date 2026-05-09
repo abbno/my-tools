@@ -1,3 +1,4 @@
+// skills-manager/src/router.ts
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
@@ -7,11 +8,6 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: () => import('@/views/Home.vue'),
-    },
-    {
-      path: '/settings',
-      name: 'settings',
-      component: () => import('@/views/Settings.vue'),
     },
   ],
 })
