@@ -135,10 +135,7 @@
     @installed="showGitDialog = false"
   />
   <AddRepoDialog v-model:visible="showAddRepo" />
-  <SettingsDialog
-    v-if="showSettings"
-    @close="showSettings = false"
-  />
+  <SettingsDialog v-model:visible="showSettings" />
 </template>
 
 <script setup lang="ts">
