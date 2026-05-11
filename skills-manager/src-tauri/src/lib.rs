@@ -4,6 +4,7 @@ pub mod git;
 pub mod skill_parser;
 pub mod symlink;
 pub mod scheduler;
+pub mod logger;
 
 use tauri::Manager;
 use scheduler::start_scheduler;
@@ -18,6 +19,9 @@ pub fn run() {
                 let window = app.get_webview_window("main").unwrap();
                 window.open_devtools();
             }
+
+            // 初始化日志系统
+            logger::init_logger(app.handle())?;
 
             // Start background scheduler
             start_scheduler(app.handle().clone());
