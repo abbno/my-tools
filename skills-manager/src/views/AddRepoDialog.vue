@@ -6,16 +6,19 @@
     size="560px"
     @close="onClose"
   >
-    <!-- Steps indicator -->
-    <t-steps :current="currentStep" class="steps-indicator">
-      <t-step-item title="输入地址" />
-      <t-step-item title="选择分支" />
-      <t-step-item title="选择技能" />
-      <t-step-item title="确认" />
-    </t-steps>
+    <div class="drawer-body">
+      <!-- Steps indicator - fixed at top -->
+      <t-steps :current="currentStep" class="steps-indicator">
+        <t-step-item title="输入地址" />
+        <t-step-item title="选择分支" />
+        <t-step-item title="选择技能" />
+        <t-step-item title="确认" />
+      </t-steps>
 
-    <!-- Step 0: Input URL + Auth -->
-    <div v-if="currentStep === 0" class="step-content">
+      <!-- Scrollable content area -->
+      <div class="drawer-content">
+        <!-- Step 0: Input URL + Auth -->
+        <div v-if="currentStep === 0" class="step-content">
       <t-form :data="formData" :rules="formRules" ref="formRef" label-align="top">
         <t-form-item label="仓库 URL" name="url">
           <t-input v-model="formData.url" placeholder="https://github.com/user/repo" />
@@ -129,6 +132,7 @@
           </div>
         </t-descriptions-item>
       </t-descriptions>
+      </div>
     </div>
 
     <!-- Footer buttons -->
@@ -367,8 +371,23 @@ function onClose() {
 </script>
 
 <style scoped>
+.drawer-body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 .steps-indicator {
-  margin-bottom: 24px;
+  flex-shrink: 0;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--td-component-border);
+  margin-bottom: 16px;
+}
+
+.drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .step-content {
@@ -389,14 +408,16 @@ function onClose() {
 .skills-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
   flex: 1;
 }
 
 .skills-header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--td-component-border);
   font-size: 14px;
   color: var(--td-text-color-secondary);
 }
@@ -405,6 +426,7 @@ function onClose() {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
+  padding-top: 12px;
 }
 
 .skills-list :deep(.t-checkbox-group) {
