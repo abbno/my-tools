@@ -27,6 +27,7 @@ pub struct Repository {
     pub id: String,
     pub name: String,
     pub url: String,
+    pub branch: String,
     pub auth: AuthConfig,
     pub sync_interval: u64, // seconds
     pub selected_skills: Vec<String>,
@@ -35,11 +36,12 @@ pub struct Repository {
 }
 
 impl Repository {
-    pub fn new(name: String, url: String) -> Self {
+    pub fn new(name: String, url: String, branch: String) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
             name,
             url,
+            branch,
             auth: AuthConfig::default(),
             sync_interval: 3600, // 1 hour default
             selected_skills: Vec::new(),
