@@ -410,14 +410,19 @@ function onClose() {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 0;
 }
 
 .skills-header {
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-bottom: 12px;
+  padding: 12px 0;
+  background: var(--td-bg-color-container);
   border-bottom: 1px solid var(--td-component-border);
   font-size: 14px;
   color: var(--td-text-color-secondary);
@@ -425,9 +430,9 @@ function onClose() {
 
 .skills-list {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-top: 12px;
 }
 
 .skills-list :deep(.t-checkbox-group) {
