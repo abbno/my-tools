@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Manager, Emitter};
+use tauri::{AppHandle, Emitter};
 
 static LAST_CHECK: Mutex<Option<Instant>> = Mutex::new(None);
 
