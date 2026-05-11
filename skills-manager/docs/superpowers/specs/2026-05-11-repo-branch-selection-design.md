@@ -428,7 +428,74 @@ info!("Found {} skills", skills.len());
 
 ---
 
+## 第七部分：打包配置变更
+
+### NSIS 安装器配置
+
+**文件：** `src-tauri/tauri.conf.json`
+
+修改 bundle 配置：
+
+```json
+{
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "perMachine",
+        "template": "./nsis/installer.nsi"
+      }
+    }
+  }
+}
+```
+
+### 自定义 NSIS 模板
+
+**文件：** `src-tauri/nsis/installer.nsi`
+
+复制 ssh-tunnel-manager 的 NSIS 模板，关键修改：
+
+```nsis
+Function .onInit
+  ; ... 其他初始化代码
+
+  ${If} $INSTDIR == "${PLACEHOLDER_INSTALL_DIR}"
+    ; Set default install location - custom directory
+    StrCpy $INSTDIR "D:\Programs\${PRODUCTNAME}"
+
+    Call RestorePreviousInstallLocation
+  ${EndIf}
+FunctionEnd
+```
+
+**默认安装目录：** `D:\Programs\Skill Manager`
+
+### 日志目录说明
+
+由于日志使用 `resource_dir()` 获取应用安装目录，日志将存储在：
+- 开发模式：项目目录下的 `logs/`
+- 生产模式：`D:\Programs\Skill Manager\logs/`（与安装目录一致）
+
+---
+
 ## 测试验证
+
+1. **安装测试**
+   - 打包后安装，验证默认安装目录为 `D:\Programs\Skill Manager`
+   - 日志文件存储在 `D:\Programs\Skill Manager\logs/`
+
+2. **日志轮转测试**
+   - 生成大量日志触发 100MB 轮转
+   - 验证日志文件数量不超过 5 个
 
 1. **公开仓库测试**
    - 输入 `https://github.com/MiniMax-AI/skills`
