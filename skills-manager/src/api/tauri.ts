@@ -67,12 +67,16 @@ export async function getSystemInfo(): Promise<SystemInfo> {
 }
 
 // Repo commands
-export async function fetchRepoSkills(url: string, auth: AuthConfig): Promise<SkillMeta[]> {
-  return invoke<SkillMeta[]>('fetch_repo_skills', { url, auth })
+export async function fetchBranches(url: string, auth: AuthConfig): Promise<string[]> {
+  return invoke<string[]>('fetch_branches', { url, auth })
 }
 
-export async function syncRepository(repoId: string, url: string, auth: AuthConfig): Promise<SkillMeta[]> {
-  return invoke<SkillMeta[]>('sync_repository', { repoId, url, auth })
+export async function fetchRepoSkills(url: string, branch: string, auth: AuthConfig): Promise<SkillMeta[]> {
+  return invoke<SkillMeta[]>('fetch_repo_skills', { url, branch, auth })
+}
+
+export async function syncRepository(repoId: string, url: string, branch: string, auth: AuthConfig): Promise<SkillMeta[]> {
+  return invoke<SkillMeta[]>('sync_repository', { repoId, url, branch, auth })
 }
 
 // Symlink commands
