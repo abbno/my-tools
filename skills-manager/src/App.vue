@@ -1,5 +1,9 @@
 <template>
-  <t-layout class="app-layout">
+  <!-- Settings page - full screen without layout -->
+  <router-view v-if="isSettingsPage" />
+
+  <!-- Main layout for other pages -->
+  <t-layout v-else class="app-layout">
     <!-- Header -->
     <t-header class="app-header">
       <div class="header-content">
@@ -104,7 +108,7 @@
           <span class="empty-icon">◇</span>
           <p>暂无仓库</p>
           <t-button
-            variant="outline"
+            theme="primary"
             @click="showAddRepo = true"
           >
             添加第一个仓库
@@ -130,7 +134,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { listen } from '@tauri-apps/api/event'
 import { useConfigStore } from '@/stores/config'
 import { useSkillsStore } from '@/stores/skills'
@@ -150,6 +154,10 @@ const configStore = useConfigStore()
 const skillsStore = useSkillsStore()
 const syncStore = useSyncStore()
 const router = useRouter()
+const route = useRoute()
+
+// Check if on settings page
+const isSettingsPage = computed(() => route.path === '/settings')
 
 // Dialog visibility
 const showGitDialog = ref(false)

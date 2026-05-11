@@ -3,7 +3,7 @@
     v-model:visible="visible"
     :header="'添加仓库'"
     :footer="true"
-    size="480px"
+    size="560px"
     @close="onClose"
   >
     <!-- Steps indicator -->

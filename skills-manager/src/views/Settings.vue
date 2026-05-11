@@ -105,10 +105,12 @@ function handleBack() {
   height: 100vh;
   padding: 24px;
   background: var(--td-bg-color-container);
+  overflow-y: auto;
 }
 
 .settings-container :deep(.t-card) {
-  height: 100%;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 .settings-container :deep(.t-card__body) {
