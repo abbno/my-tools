@@ -19,119 +19,120 @@
       <div class="drawer-content">
         <!-- Step 0: Input URL + Auth -->
         <div v-if="currentStep === 0" class="step-content">
-      <t-form :data="formData" :rules="formRules" ref="formRef" label-align="top">
-        <t-form-item label="仓库 URL" name="url">
-          <t-input v-model="formData.url" placeholder="https://github.com/user/repo" />
-        </t-form-item>
+          <t-form :data="formData" :rules="formRules" ref="formRef" label-align="top">
+            <t-form-item label="仓库 URL" name="url">
+              <t-input v-model="formData.url" placeholder="https://github.com/user/repo" />
+            </t-form-item>
 
-        <t-form-item label="认证方式">
-          <t-select v-model="formData.authType">
-            <t-option value="none" label="无需认证" />
-            <t-option value="token" label="令牌" />
-            <t-option value="username-password" label="用户名和密码" />
-          </t-select>
-        </t-form-item>
+            <t-form-item label="认证方式">
+              <t-select v-model="formData.authType">
+                <t-option value="none" label="无需认证" />
+                <t-option value="token" label="令牌" />
+                <t-option value="username-password" label="用户名和密码" />
+              </t-select>
+            </t-form-item>
 
-        <t-form-item v-if="formData.authType === 'token'" label="访问令牌">
-          <t-input v-model="formData.token" type="password" placeholder="ghp_xxx or glpat_xxx" />
-        </t-form-item>
+            <t-form-item v-if="formData.authType === 'token'" label="访问令牌">
+              <t-input v-model="formData.token" type="password" placeholder="ghp_xxx or glpat_xxx" />
+            </t-form-item>
 
-        <template v-if="formData.authType === 'username-password'">
-          <t-form-item label="用户名">
-            <t-input v-model="formData.username" placeholder="用户名" />
-          </t-form-item>
-          <t-form-item label="密码">
-            <t-input v-model="formData.password" type="password" placeholder="密码" />
-          </t-form-item>
-        </template>
-      </t-form>
-    </div>
-
-    <!-- Step 1: Select Branch -->
-    <div v-if="currentStep === 1" class="step-content">
-      <div v-if="loadingBranches" class="loading-container">
-        <t-loading text="正在获取分支..." />
-      </div>
-
-      <t-alert v-else-if="branchError" theme="error" :message="branchError">
-        <template #operation>
-          <t-link theme="primary" @click="retryFetchBranches">重试</t-link>
-        </template>
-      </t-alert>
-
-      <div v-else>
-        <t-form label-align="top">
-          <t-form-item label="选择分支">
-            <t-select v-model="formData.branch" :options="branchOptions" />
-          </t-form-item>
-        </t-form>
-      </div>
-    </div>
-
-    <!-- Step 2: Select Skills -->
-    <div v-if="currentStep === 2" class="step-content">
-      <div v-if="loading" class="loading-container">
-        <t-loading text="正在获取仓库中的技能..." />
-      </div>
-
-      <t-alert v-else-if="error" theme="error" :message="error">
-        <template #operation>
-          <t-link theme="primary" @click="retryFetchSkills">重试</t-link>
-        </template>
-      </t-alert>
-
-      <div v-else class="skills-panel">
-        <div class="skills-header">
-          <span>{{ skills.length }} 个技能</span>
-          <t-link theme="primary" @click="selectAll">
-            {{ selectedSkills.length === skills.length ? '取消全选' : '全选' }}
-          </t-link>
+            <template v-if="formData.authType === 'username-password'">
+              <t-form-item label="用户名">
+                <t-input v-model="formData.username" placeholder="用户名" />
+              </t-form-item>
+              <t-form-item label="密码">
+                <t-input v-model="formData.password" type="password" placeholder="密码" />
+              </t-form-item>
+            </template>
+          </t-form>
         </div>
-        <t-checkbox-group v-model="selectedSkills" class="skills-list">
-          <t-checkbox
-            v-for="skill in skills"
-            :key="skill.path"
-            :value="skill.path"
-            class="skill-item"
-          >
-            <div class="skill-info">
-              <span class="skill-name">{{ skill.name }}</span>
-              <span class="skill-desc">{{ skill.description || '暂无描述' }}</span>
-            </div>
-          </t-checkbox>
-        </t-checkbox-group>
-      </div>
-    </div>
 
-    <!-- Step 3: Summary -->
-    <div v-if="currentStep === 3" class="step-content">
-      <t-descriptions title="汇总" :column="2" bordered>
-        <t-descriptions-item label="名称">{{ generatedName }}</t-descriptions-item>
-        <t-descriptions-item label="地址" :span="2">
-          <code class="url-code">{{ formData.url }}</code>
-        </t-descriptions-item>
-        <t-descriptions-item label="分支">{{ formData.branch }}</t-descriptions-item>
-        <t-descriptions-item label="认证">
-          <t-tag theme="primary" variant="light">
-            {{ formData.authType === 'none' ? '无' : formData.authType === 'token' ? '令牌' : '用户/密码' }}
-          </t-tag>
-        </t-descriptions-item>
-        <t-descriptions-item label="已选技能" :span="2">
-          <div class="selected-skills">
-            <t-tag
-              v-for="path in selectedSkills.slice(0, 5)"
-              :key="path"
-              theme="default"
-              variant="light"
-            >
-              {{ getSkillName(path) }}
-            </t-tag>
-            <t-tag v-if="selectedSkills.length > 5" theme="primary" variant="light">
-              +{{ selectedSkills.length - 5 }} 更多
-            </t-tag>
+        <!-- Step 1: Select Branch -->
+        <div v-if="currentStep === 1" class="step-content">
+          <div v-if="loadingBranches" class="loading-container">
+            <t-loading text="正在获取分支..." />
           </div>
-        </t-descriptions-item>
-      </t-descriptions>
+
+          <t-alert v-else-if="branchError" theme="error" :message="branchError">
+            <template #operation>
+              <t-link theme="primary" @click="retryFetchBranches">重试</t-link>
+            </template>
+          </t-alert>
+
+          <div v-else>
+            <t-form label-align="top">
+              <t-form-item label="选择分支">
+                <t-select v-model="formData.branch" :options="branchOptions" />
+              </t-form-item>
+            </t-form>
+          </div>
+        </div>
+
+        <!-- Step 2: Select Skills -->
+        <div v-if="currentStep === 2" class="step-content">
+          <div v-if="loading" class="loading-container">
+            <t-loading text="正在获取仓库中的技能..." />
+          </div>
+
+          <t-alert v-else-if="error" theme="error" :message="error">
+            <template #operation>
+              <t-link theme="primary" @click="retryFetchSkills">重试</t-link>
+            </template>
+          </t-alert>
+
+          <div v-else class="skills-panel">
+            <div class="skills-header">
+              <span>{{ skills.length }} 个技能</span>
+              <t-link theme="primary" @click="selectAll">
+                {{ selectedSkills.length === skills.length ? '取消全选' : '全选' }}
+              </t-link>
+            </div>
+            <t-checkbox-group v-model="selectedSkills" class="skills-list">
+              <t-checkbox
+                v-for="skill in skills"
+                :key="skill.path"
+                :value="skill.path"
+                class="skill-item"
+              >
+                <div class="skill-info">
+                  <span class="skill-name">{{ skill.name }}</span>
+                  <span class="skill-desc">{{ skill.description || '暂无描述' }}</span>
+                </div>
+              </t-checkbox>
+            </t-checkbox-group>
+          </div>
+        </div>
+
+        <!-- Step 3: Summary -->
+        <div v-if="currentStep === 3" class="step-content">
+          <t-descriptions title="汇总" :column="2" bordered>
+            <t-descriptions-item label="名称">{{ generatedName }}</t-descriptions-item>
+            <t-descriptions-item label="地址" :span="2">
+              <code class="url-code">{{ formData.url }}</code>
+            </t-descriptions-item>
+            <t-descriptions-item label="分支">{{ formData.branch }}</t-descriptions-item>
+            <t-descriptions-item label="认证">
+              <t-tag theme="primary" variant="light">
+                {{ formData.authType === 'none' ? '无' : formData.authType === 'token' ? '令牌' : '用户/密码' }}
+              </t-tag>
+            </t-descriptions-item>
+            <t-descriptions-item label="已选技能" :span="2">
+              <div class="selected-skills">
+                <t-tag
+                  v-for="path in selectedSkills.slice(0, 5)"
+                  :key="path"
+                  theme="default"
+                  variant="light"
+                >
+                  {{ getSkillName(path) }}
+                </t-tag>
+                <t-tag v-if="selectedSkills.length > 5" theme="primary" variant="light">
+                  +{{ selectedSkills.length - 5 }} 更多
+                </t-tag>
+              </div>
+            </t-descriptions-item>
+          </t-descriptions>
+        </div>
       </div>
     </div>
 
