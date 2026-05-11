@@ -171,14 +171,19 @@
 import { ref, computed, watch } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useConfigStore } from '@/stores/config'
-import { fetchRepoSkills, type SkillMeta, type AuthConfig } from '@/api/tauri'
+import { useSkillsStore } from '@/stores/skills'
+import { fetchBranches, fetchRepoSkills, type SkillMeta, type AuthConfig } from '@/api/tauri'
 import { v4 as uuidv4 } from 'uuid'
 
 const configStore = useConfigStore()
+const skillsStore = useSkillsStore()
 
 const visible = defineModel<boolean>('visible', { default: false })
 
 const currentStep = ref(0)
+const loadingBranches = ref(false)
+const branchError = ref<string | null>(null)
+const branches = ref<string[]>([])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const skills = ref<SkillMeta[]>([])
@@ -186,50 +191,60 @@ const selectedSkills = ref<string[]>([])
 const formRef = ref()
 
 const formData = ref({
-  name: '',
   url: '',
+  branch: '',
   authType: 'none',
   token: '',
   username: '',
   password: '',
-  syncInterval: '3600',
 })
 
 const formRules = {
-  name: [{ required: true, message: 'Name is required' }],
   url: [{ required: true, message: 'URL is required' }],
 }
 
-const syncIntervalLabel = computed(() => {
-  const labels: Record<string, string> = {
-    '300': '5 分钟',
-    '900': '15 分钟',
-    '1800': '30 分钟',
-    '3600': '1 小时',
-    '7200': '2 小时',
-    '21600': '6 小时',
-    '43200': '12 小时',
-    '86400': '每天',
+const branchOptions = computed(() =>
+  branches.value.map(b => ({ label: b, value: b }))
+)
+
+// Generate name from URL and branch
+const generatedName = computed(() => {
+  const url = formData.value.url
+  const branch = formData.value.branch
+
+  // Parse URL: https://github.com/owner/repo -> owner/repo
+  let name = url
+    .replace(/^https?:\/\//, '')
+    .replace(/^git@/, '')
+    .replace(/\.git$/, '')
+
+  // Remove domain
+  const parts = name.split('/')
+  if (parts.length >= 3) {
+    name = parts.slice(2).join('/')
   }
-  return labels[formData.value.syncInterval] || '1 小时'
+
+  return `${name}(${branch})`
 })
 
 // Reset state when dialog opens
 watch(visible, (val) => {
   if (val) {
     currentStep.value = 0
+    loadingBranches.value = false
+    branchError.value = null
+    branches.value = []
     loading.value = false
     error.value = null
     skills.value = []
     selectedSkills.value = []
     formData.value = {
-      name: '',
       url: '',
+      branch: '',
       authType: 'none',
       token: '',
       username: '',
       password: '',
-      syncInterval: '3600',
     }
   }
 })
@@ -247,17 +262,49 @@ function selectAll() {
   }
 }
 
+function getAuthConfig(): AuthConfig {
+  return {
+    type: formData.value.authType as 'none' | 'token' | 'username-password',
+    token: formData.value.authType === 'token' ? formData.value.token : undefined,
+    username: formData.value.authType === 'username-password' ? formData.value.username : undefined,
+    password: formData.value.authType === 'username-password' ? formData.value.password : undefined,
+  }
+}
+
+async function onFetchBranches() {
+  const valid = await formRef.value?.validate()
+  if (valid !== true) return
+
+  loadingBranches.value = true
+  branchError.value = null
+
+  try {
+    const auth = getAuthConfig()
+    branches.value = await fetchBranches(formData.value.url, auth)
+    if (branches.value.length > 0) {
+      formData.value.branch = branches.value[0]
+      currentStep.value = 1
+    } else {
+      branchError.value = '未找到任何分支'
+    }
+  } catch (e) {
+    branchError.value = String(e)
+  } finally {
+    loadingBranches.value = false
+  }
+}
+
+function retryFetchBranches() {
+  branchError.value = null
+  onFetchBranches()
+}
+
 async function fetchSkillsPreview() {
   loading.value = true
   error.value = null
   try {
-    const auth: AuthConfig = {
-      type: formData.value.authType as 'none' | 'token' | 'username-password',
-      token: formData.value.authType === 'token' ? formData.value.token : undefined,
-      username: formData.value.authType === 'username-password' ? formData.value.username : undefined,
-      password: formData.value.authType === 'username-password' ? formData.value.password : undefined,
-    }
-    skills.value = await fetchRepoSkills(formData.value.url, auth)
+    const auth = getAuthConfig()
+    skills.value = await fetchRepoSkills(formData.value.url, formData.value.branch, auth)
     selectedSkills.value = skills.value.map(s => s.path)
   } catch (e) {
     error.value = String(e)
@@ -266,43 +313,44 @@ async function fetchSkillsPreview() {
   }
 }
 
-function retryFetch() {
+function retryFetchSkills() {
   error.value = null
   fetchSkillsPreview()
 }
 
 async function onConfirm() {
-  if (currentStep.value === 0) {
-    const valid = await formRef.value?.validate()
-    if (valid !== true) return
-    currentStep.value = 1
+  if (currentStep.value === 1) {
+    // Go to fetch skills
+    currentStep.value = 2
     await fetchSkillsPreview()
-  } else if (currentStep.value === 1) {
+  } else if (currentStep.value === 2) {
     if (selectedSkills.value.length === 0) {
       MessagePlugin.warning('请至少选择一个技能')
       return
     }
-    currentStep.value = 2
-  } else if (currentStep.value === 2) {
-    const auth: AuthConfig = {
-      type: formData.value.authType as 'none' | 'token' | 'username-password',
-      token: formData.value.authType === 'token' ? formData.value.token : undefined,
-      username: formData.value.authType === 'username-password' ? formData.value.username : undefined,
-      password: formData.value.authType === 'username-password' ? formData.value.password : undefined,
-    }
-    configStore.addRepository({
-      id: uuidv4(),
-      name: formData.value.name,
-      url: formData.value.url,
-      auth,
-      sync_interval: Number(formData.value.syncInterval),
-      selected_skills: selectedSkills.value,
-      last_sync: null,
-      enabled: true,
-    })
-    MessagePlugin.success('仓库添加成功')
-    visible.value = false
+    currentStep.value = 3
   }
+}
+
+async function onSave() {
+  const auth = getAuthConfig()
+  configStore.addRepository({
+    id: uuidv4(),
+    name: generatedName.value,
+    url: formData.value.url,
+    branch: formData.value.branch,
+    auth,
+    sync_interval: 3600,
+    selected_skills: selectedSkills.value,
+    last_sync: null,
+    enabled: true,
+  })
+  MessagePlugin.success('仓库添加成功')
+
+  // Select the new repo
+  skillsStore.setCurrentRepo(configStore.config?.repositories?.slice(-1)[0]?.id || null)
+
+  visible.value = false
 }
 
 function onCancel() {
