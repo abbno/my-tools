@@ -398,9 +398,6 @@ function onClose() {
 }
 
 .skills-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
   max-height: 240px;
   overflow-y: auto;
   overflow-x: hidden;
@@ -410,12 +407,6 @@ function onClose() {
   display: flex !important;
   flex-direction: column !important;
   gap: 8px;
-  width: 100%;
-}
-
-.skills-list :deep(.t-checkbox-group .t-checkbox) {
-  display: block !important;
-  width: 100%;
 }
 
 .skill-item {
@@ -424,31 +415,17 @@ function onClose() {
   border: 1px solid var(--td-component-border);
   border-radius: var(--td-radius-default);
   transition: all 0.2s;
-  width: 100%;
-  display: block;
-  box-sizing: border-box;
 }
 
 .skill-item:hover {
   border-color: var(--td-brand-color);
 }
 
-.skill-item :deep(.t-checkbox) {
-  width: 100%;
-  display: block;
-}
-
-.skill-item :deep(.t-checkbox__label) {
-  width: 100%;
-  max-width: 100%;
-  flex: 1;
-  display: flex;
-}
-
 .skill-info {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: 100%;
 }
 
 .skill-name {
