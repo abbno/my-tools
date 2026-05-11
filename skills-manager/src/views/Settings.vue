@@ -111,10 +111,13 @@ function handleBack() {
 .settings-container :deep(.t-card) {
   max-width: 800px;
   margin: 0 auto;
+  height: auto;
+  overflow: visible;
 }
 
 .settings-container :deep(.t-card__body) {
   padding: 24px;
+  overflow: visible;
 }
 
 .section-title {
