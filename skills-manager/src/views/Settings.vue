@@ -297,7 +297,7 @@ onMounted(async () => {
 
 /* Sidebar */
 .settings-sidebar {
-  width: 200px;
+  width: 248px;
   background: #fff;
   border-right: 1px solid var(--td-component-border);
   padding: 16px 0;
