@@ -1,28 +1,35 @@
-use crate::git::{clone_repo, pull_repo, get_repo_path, is_git_repo};
+use log::{info, error};
+use crate::git::{clone_repo, pull_repo, get_repo_path, is_git_repo, fetch_remote_branches, checkout_branch};
 use crate::skill_parser::scan_skills;
 use crate::symlink::{create_symlink, get_skill_source_path, get_skill_target_path, ensure_agent_dir};
 use crate::models::{AuthConfig, SkillMeta};
 
 #[tauri::command]
 pub fn fetch_repo_skills(url: String, branch: String, auth: AuthConfig) -> Result<Vec<SkillMeta>, String> {
+    info!("Fetching repo skills for {} branch {}", url, branch);
+
     // Generate a temporary repo ID for preview
     let temp_repo_id = "preview".to_string();
     let temp_path = get_repo_path(&temp_repo_id)?;
 
-    // Clone to temporary location
+    // Clone to temporary location with specific branch
     let result = clone_repo(&url, &branch, &temp_path, &auth);
     if !result.success {
+        error!("Clone failed: {}", result.message);
         return Err(result.message);
     }
 
     // Scan for skills
+    info!("Scanning skills in {}", temp_path.to_string_lossy());
     let skills = scan_skills(&temp_path, &temp_repo_id);
 
     // Clean up temporary clone
     if temp_path.exists() {
         std::fs::remove_dir_all(&temp_path).ok();
+        info!("Cleaned up temporary clone");
     }
 
+    info!("Found {} skills", skills.len());
     Ok(skills)
 }
 
@@ -81,4 +88,10 @@ pub fn undeploy_skill(skill_name: String, agent_paths: Vec<String>) -> Result<()
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn fetch_branches(url: String, auth: AuthConfig) -> Result<Vec<String>, String> {
+    info!("Fetching branches for URL: {}", url);
+    fetch_remote_branches(&url, &auth)
 }
