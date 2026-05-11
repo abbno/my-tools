@@ -19,7 +19,7 @@
           <t-button
             v-if="!configStore.config?.repositories?.length"
             theme="primary"
-            @click="emit('addRepo')"
+            @click="handleAddRepo"
           >
             添加第一个仓库
           </t-button>
@@ -33,21 +33,38 @@
       :repo-name="selectedRepoName"
       @close="onPanelClose"
     />
+
+    <!-- Add repo dialog (fallback when injected function unavailable) -->
+    <AddRepoDialog v-model:visible="showAddRepoLocal" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { useConfigStore } from '@/stores/config'
 import { useSkillsStore } from '@/stores/skills'
 import SkillCard from '@/components/SkillCard.vue'
 import SkillDetailPanel from '@/components/SkillDetailPanel.vue'
+import AddRepoDialog from '@/views/AddRepoDialog.vue'
 import type { SkillMeta } from '@/stores/skills'
 
 const configStore = useConfigStore()
 const skillsStore = useSkillsStore()
 
-const emit = defineEmits<{ (e: 'addRepo'): void }>()
+// Local dialog visibility for fallback
+const showAddRepoLocal = ref(false)
+
+// Inject the openAddRepo function from App.vue (may be undefined)
+const openAddRepoInjected = inject<() => void>('openAddRepo')
+
+// Handle add repo - use injected function if available, otherwise use local state
+function handleAddRepo() {
+  if (openAddRepoInjected) {
+    openAddRepoInjected()
+  } else {
+    showAddRepoLocal.value = true
+  }
+}
 
 const filteredSkills = computed(() => {
   let skills = skillsStore.skills

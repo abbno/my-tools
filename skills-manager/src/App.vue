@@ -133,7 +133,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, provide } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { listen } from '@tauri-apps/api/event'
 import { useConfigStore } from '@/stores/config'
@@ -189,6 +189,9 @@ function openAddRepo() {
   showAddRepo.value = true
 }
 
+// Provide openAddRepo to child components (Home.vue)
+provide('openAddRepo', openAddRepo)
+
 async function onSyncAll() {
   syncStore.startSync()
   syncStore.clearProgress()
@@ -218,16 +221,20 @@ onMounted(async () => {
   }
 
   // Listen for sync progress events
-  unlisten = await listen('sync-progress', (event) => {
-    const payload = event.payload as { repo_id: string; status: string; message?: string }
-    if (payload.status === 'syncing') {
-      syncStore.startSync(payload.repo_id)
-    } else if (payload.status === 'success') {
-      syncStore.endSync(payload.repo_id)
-    } else if (payload.status === 'error') {
-      syncStore.setError(payload.repo_id, payload.message || 'Unknown error')
-    }
-  })
+  try {
+    unlisten = await listen('sync-progress', (event) => {
+      const payload = event.payload as { repo_id: string; status: string; message?: string }
+      if (payload.status === 'syncing') {
+        syncStore.startSync(payload.repo_id)
+      } else if (payload.status === 'success') {
+        syncStore.endSync(payload.repo_id)
+      } else if (payload.status === 'error') {
+        syncStore.setError(payload.repo_id, payload.message || 'Unknown error')
+      }
+    })
+  } catch (error) {
+    console.error('Failed to setup event listener:', error)
+  }
 })
 
 onUnmounted(() => {
