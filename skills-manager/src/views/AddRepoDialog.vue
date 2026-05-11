@@ -374,6 +374,8 @@ function onClose() {
 .step-content {
   min-height: 280px;
   padding: 16px 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .loading-container {
@@ -381,12 +383,14 @@ function onClose() {
   justify-content: center;
   align-items: center;
   min-height: 200px;
+  flex: 1;
 }
 
 .skills-panel {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  flex: 1;
 }
 
 .skills-header {
@@ -398,7 +402,7 @@ function onClose() {
 }
 
 .skills-list {
-  max-height: 240px;
+  flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
 }
