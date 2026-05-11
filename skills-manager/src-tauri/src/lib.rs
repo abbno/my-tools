@@ -33,6 +33,7 @@ pub fn run() {
             commands::get_system_info,
             commands::read_config,
             commands::save_config,
+            commands::fetch_branches,
             commands::fetch_repo_skills,
             commands::sync_repository,
             commands::deploy_skill,
