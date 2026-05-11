@@ -487,6 +487,88 @@ FunctionEnd
 
 ---
 
+## 第八部分：设置页面重构
+
+### 路由配置
+
+**文件：** `src/router.ts`
+
+```typescript
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: () => import('@/views/Home.vue'),
+    },
+    {
+      path: '/settings',
+      name: 'settings',
+      component: () => import('@/views/Settings.vue'),
+    },
+  ],
+})
+```
+
+### 创建设置页面
+
+**文件：** `src/views/Settings.vue`（新建）
+
+页面结构：
+- 使用 `t-card` 作为主容器
+- Header 包含"返回主页"和"保存"按钮
+- 分区域展示设置内容
+
+**设置内容区域：**
+
+| 区域 | 内容 |
+|------|------|
+| Agent 配置 | 显示所有 Agent 列表，可启用/禁用 |
+| 同步设置 | 自动同步开关、默认同步间隔选择 |
+| 版本信息 | 当前版本号、检查更新按钮 |
+| 关于 | 应用名称、版本、描述 |
+
+**页面样式：**
+```css
+.settings-container {
+  height: 100vh;
+  padding: 24px;
+  background: var(--td-bg-color-container);
+}
+
+.section-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--td-text-color-primary);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--td-component-border);
+}
+```
+
+### Header 设置按钮跳转
+
+**文件：** `src/App.vue`
+
+修改 header 中的设置按钮：
+
+```vue
+<t-button
+  variant="outline"
+  shape="circle"
+  @click="router.push('/settings')"
+>
+  <setting-icon />
+</t-button>
+```
+
+### 删除旧组件
+
+删除 `src/components/SettingsDialog.vue`，不再使用弹框形式。
+
+---
+
 ## 测试验证
 
 1. **安装测试**
