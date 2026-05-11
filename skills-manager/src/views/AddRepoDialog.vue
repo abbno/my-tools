@@ -1,10 +1,9 @@
 <template>
-  <t-dialog
+  <t-drawer
     v-model:visible="visible"
-    width="600px"
     :header="'添加仓库'"
-    :confirm-btn="null"
-    :cancel-btn="null"
+    :footer="true"
+    size="480px"
     @close="onClose"
   >
     <!-- Steps indicator -->
@@ -138,7 +137,7 @@
         </t-button>
       </div>
     </template>
-  </t-dialog>
+  </t-drawer>
 </template>
 
 <script setup lang="ts">
