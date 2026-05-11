@@ -34,7 +34,6 @@
       <!-- Sidebar -->
       <t-aside class="app-aside">
         <div class="aside-header">
-          <span class="aside-label">仓库列表</span>
           <div class="aside-actions">
             <t-button
               variant="outline"
@@ -106,7 +105,6 @@
           <p>暂无仓库</p>
           <t-button
             variant="outline"
-            size="small"
             @click="showAddRepo = true"
           >
             添加第一个仓库
@@ -289,24 +287,12 @@ onUnmounted(() => {
 
 .aside-header {
   padding: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   border-bottom: 1px solid #e7e7e7;
-}
-
-.aside-label {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--td-text-color-placeholder);
-  letter-spacing: 0.1em;
-  white-space: nowrap;
 }
 
 .aside-actions {
   display: flex;
   gap: 8px;
-  flex-shrink: 0;
 }
 
 .repo-menu {
