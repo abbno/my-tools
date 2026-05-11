@@ -8,20 +8,17 @@
   >
     <!-- Steps indicator -->
     <t-steps :current="currentStep" class="steps-indicator">
-      <t-step-item title="仓库信息" />
+      <t-step-item title="输入地址" />
+      <t-step-item title="选择分支" />
       <t-step-item title="选择技能" />
       <t-step-item title="确认" />
     </t-steps>
 
-    <!-- Step 0: Input form -->
+    <!-- Step 0: Input URL + Auth -->
     <div v-if="currentStep === 0" class="step-content">
       <t-form :data="formData" :rules="formRules" ref="formRef" label-align="top">
-        <t-form-item label="仓库名称" name="name">
-          <t-input v-model="formData.name" placeholder="我的技能仓库" />
-        </t-form-item>
-
         <t-form-item label="仓库 URL" name="url">
-          <t-input v-model="formData.url" placeholder="https://github.com/user/skills-repo" />
+          <t-input v-model="formData.url" placeholder="https://github.com/user/repo" />
         </t-form-item>
 
         <t-form-item label="认证方式">
@@ -44,31 +41,39 @@
             <t-input v-model="formData.password" type="password" placeholder="密码" />
           </t-form-item>
         </template>
-
-        <t-form-item label="同步间隔">
-          <t-select v-model="formData.syncInterval">
-            <t-option value="300" label="5 分钟" />
-            <t-option value="900" label="15 分钟" />
-            <t-option value="1800" label="30 分钟" />
-            <t-option value="3600" label="1 小时" />
-            <t-option value="7200" label="2 小时" />
-            <t-option value="21600" label="6 小时" />
-            <t-option value="43200" label="12 小时" />
-            <t-option value="86400" label="每天" />
-          </t-select>
-        </t-form-item>
       </t-form>
     </div>
 
-    <!-- Step 1: Preview skills -->
+    <!-- Step 1: Select Branch -->
     <div v-if="currentStep === 1" class="step-content">
+      <div v-if="loadingBranches" class="loading-container">
+        <t-loading text="正在获取分支..." />
+      </div>
+
+      <t-alert v-else-if="branchError" theme="error" :message="branchError">
+        <template #operation>
+          <t-link theme="primary" @click="retryFetchBranches">重试</t-link>
+        </template>
+      </t-alert>
+
+      <div v-else>
+        <t-form label-align="top">
+          <t-form-item label="选择分支">
+            <t-select v-model="formData.branch" :options="branchOptions" />
+          </t-form-item>
+        </t-form>
+      </div>
+    </div>
+
+    <!-- Step 2: Select Skills -->
+    <div v-if="currentStep === 2" class="step-content">
       <div v-if="loading" class="loading-container">
         <t-loading text="正在获取仓库中的技能..." />
       </div>
 
       <t-alert v-else-if="error" theme="error" :message="error">
         <template #operation>
-          <t-link theme="primary" @click="retryFetch">Retry</t-link>
+          <t-link theme="primary" @click="retryFetchSkills">重试</t-link>
         </template>
       </t-alert>
 
@@ -95,19 +100,19 @@
       </div>
     </div>
 
-    <!-- Step 2: Summary -->
-    <div v-if="currentStep === 2" class="step-content">
+    <!-- Step 3: Summary -->
+    <div v-if="currentStep === 3" class="step-content">
       <t-descriptions title="汇总" :column="2" bordered>
-        <t-descriptions-item label="名称">{{ formData.name }}</t-descriptions-item>
+        <t-descriptions-item label="名称">{{ generatedName }}</t-descriptions-item>
         <t-descriptions-item label="地址" :span="2">
           <code class="url-code">{{ formData.url }}</code>
         </t-descriptions-item>
+        <t-descriptions-item label="分支">{{ formData.branch }}</t-descriptions-item>
         <t-descriptions-item label="认证">
           <t-tag theme="primary" variant="light">
             {{ formData.authType === 'none' ? '无' : formData.authType === 'token' ? '令牌' : '用户/密码' }}
           </t-tag>
         </t-descriptions-item>
-        <t-descriptions-item label="同步">{{ syncIntervalLabel }}</t-descriptions-item>
         <t-descriptions-item label="已选技能" :span="2">
           <div class="selected-skills">
             <t-tag
@@ -132,8 +137,30 @@
         <t-button variant="outline" @click="onCancel">
           {{ currentStep === 0 ? '取消' : '返回' }}
         </t-button>
-        <t-button theme="primary" @click="onConfirm">
-          {{ currentStep === 2 ? '保存仓库' : '继续' }}
+        <t-button
+          v-if="currentStep === 0"
+          theme="primary"
+          :loading="loadingBranches"
+          :disabled="!formData.url"
+          @click="onFetchBranches"
+        >
+          获取分支
+        </t-button>
+        <t-button
+          v-else-if="currentStep < 3"
+          theme="primary"
+          :loading="currentStep === 1 && loading"
+          :disabled="currentStep === 2 && selectedSkills.length === 0"
+          @click="onConfirm"
+        >
+          继续
+        </t-button>
+        <t-button
+          v-else
+          theme="primary"
+          @click="onSave"
+        >
+          保存仓库
         </t-button>
       </div>
     </template>
