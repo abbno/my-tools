@@ -30,6 +30,7 @@ export interface Repository {
   id: string
   name: string
   url: string
+  branch: string
   auth: AuthConfig
   sync_interval: number
   selected_skills: string[]
