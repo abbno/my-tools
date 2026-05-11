@@ -12,10 +12,12 @@
       </t-form-item>
 
       <t-form-item label="Agent 路径" name="path">
-        <t-input v-model="formData.path" placeholder="~/xxx 或完整路径" />
-        <div class="path-hint">
-          提示：支持 ~/ 开头表示家目录，如 ~/.claude<br />
-          或输入完整路径，如 /home/user/.claude
+        <div class="path-input-wrapper">
+          <t-input v-model="formData.path" placeholder="~/xxx 或完整路径" />
+          <div class="path-hint">
+            提示：支持 ~/ 开头表示家目录，如 ~/.claude<br />
+            或输入完整路径，如 /home/user/.claude
+          </div>
         </div>
       </t-form-item>
 
@@ -145,6 +147,12 @@ function onClose() {
 </script>
 
 <style scoped>
+.path-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
 .path-hint {
   margin-top: 8px;
   font-size: 12px;
