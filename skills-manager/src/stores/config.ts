@@ -68,6 +68,21 @@ export const useConfigStore = defineStore('config', () => {
     saveConfigData()
   }
 
+  function batchUpdateSettings(updates: Partial<Settings>) {
+    if (!config.value) return
+    Object.assign(config.value.settings, updates)
+  }
+
+  function batchUpdateAgents(updates: Array<{ id: string; enabled: boolean }>) {
+    if (!config.value) return
+    for (const update of updates) {
+      const agent = config.value.agents.find(a => a.id === update.id)
+      if (agent) {
+        agent.enabled = update.enabled
+      }
+    }
+  }
+
   return {
     config,
     loading,
@@ -79,5 +94,7 @@ export const useConfigStore = defineStore('config', () => {
     removeRepository,
     updateAgent,
     updateSettings,
+    batchUpdateSettings,
+    batchUpdateAgents,
   }
 })
