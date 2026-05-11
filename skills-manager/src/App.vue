@@ -51,7 +51,7 @@
             </t-button>
             <t-button
               variant="outline"
-              @click="showAddRepo = true"
+              @click="openAddRepo"
             >
               <template #icon>
                 <add-icon />
@@ -109,7 +109,7 @@
           <p>暂无仓库</p>
           <t-button
             theme="primary"
-            @click="showAddRepo = true"
+            @click="openAddRepo"
           >
             添加第一个仓库
           </t-button>
@@ -183,6 +183,10 @@ function onRepoChange(value: string) {
 function getSyncStatus(repoId: string): string {
   const progress = syncStore.getProgress(repoId)
   return progress?.status || 'pending'
+}
+
+function openAddRepo() {
+  showAddRepo.value = true
 }
 
 async function onSyncAll() {
