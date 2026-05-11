@@ -293,6 +293,141 @@ export interface Repository {
 
 ---
 
+## 第六部分：日志系统
+
+### 依赖
+
+**Cargo.toml 添加：**
+
+```toml
+[dependencies]
+log4rs = "1.3"
+log = "0.4"
+```
+
+### 日志配置
+
+**文件：** `src-tauri/src/logger.rs`
+
+```rust
+use log4rs::config::{Appender, Config, Root};
+use log4rs::append::rolling_file::RollingFileAppender;
+use log4rs::append::rolling_file::policy::compound::CompoundPolicy;
+use log4rs::append::rolling_file::policy::compound::trigger::size::SizeTrigger;
+use log4rs::append::rolling_file::policy::compound::trigger::time::TimeTrigger;
+use log4rs::append::rolling_file::policy::compound::roller::FixedWindowRoller;
+use log::LevelFilter;
+use std::path::PathBuf;
+
+pub fn init_logger(app_handle: &tauri::AppHandle) -> Result<(), String> {
+    // 获取应用资源目录下的 logs
+    let logs_dir = app_handle
+        .path()
+        .resource_dir()
+        .map_err(|e| e.to_string())?
+        .join("logs");
+    
+    // 确保 logs 目录存在
+    std::fs::create_dir_all(&logs_dir).map_err(|e| e.to_string())?;
+    
+    let log_file = logs_dir.join("app.log");
+    
+    // 配置滚动策略
+    // 大小触发：100MB
+    let size_trigger = SizeTrigger::new(100 * 1024 * 1024);
+    
+    // 时间触发：每天
+    let time_trigger = TimeTrigger::new(
+        log4rs::append::rolling_file::policy::compound::trigger::time::Frequency::Daily
+    );
+    
+    // 滚动器：最多保留 5 个文件
+    let roller = FixedWindowRoller::builder()
+        .build(logs_dir.join("app.log.%d").to_string_lossy(), 5)
+        .map_err(|e| e.to_string())?;
+    
+    // 复合策略：大小或时间任一满足就轮转
+    let policy = CompoundPolicy::new(
+        Box::new(size_trigger),
+        Box::new(time_trigger),
+        Box::new(roller),
+    );
+    
+    // 创建滚动文件 appender
+    let appender = RollingFileAppender::builder()
+        .append(true)
+        .build(log_file, Box::new(policy))
+        .map_err(|e| e.to_string())?;
+    
+    // 配置
+    let config = Config::builder()
+        .appender(Appender::builder().build("main", Box::new(appender)))
+        .build(Root::builder().appender("main").build(LevelFilter::Info))
+        .map_err(|e| e.to_string())?;
+    
+    // 初始化
+    log4rs::init_config(config).map_err(|e| e.to_string())?;
+    
+    Ok(())
+}
+```
+
+### 日志文件命名
+
+轮转后的文件命名规则：
+- 当前日志：`app.log`
+- 第 1 个备份：`app.log.1`
+- 第 2 个备份：`app.log.2`
+- ...
+- 第 5 个备份：`app.log.5`
+
+超过 5 个时，最旧的（`app.log.5`）会被删除。
+
+### 日志格式
+
+```
+[2026-05-11 10:30:45 INFO] Fetching branches for repository: https://github.com/user/repo
+[2026-05-11 10:30:46 INFO] Found 3 branches: main, dev, feature-x
+[2026-05-11 10:30:47 ERROR] Failed to clone repository: authentication failed
+```
+
+格式：`[时间 级别] 消息`
+
+### 日志使用示例
+
+```rust
+use log::{info, error, warn, debug};
+
+// 分支获取
+info!("Fetching branches for repository: {}", url);
+info!("Found {} branches: {:?}", branches.len(), branches);
+error!("Failed to fetch branches: {}", err);
+
+// 仓库克隆
+info!("Cloning repository {} branch {} to {}", url, branch, path);
+error!("Clone failed: {}", err);
+
+// 技能扫描
+info!("Scanning skills in {}", path);
+info!("Found {} skills", skills.len());
+```
+
+### 日志初始化时机
+
+在 `lib.rs` 的 `setup` 函数中初始化：
+
+```rust
+.setup(|app| {
+    // 初始化日志系统
+    logger::init_logger(app.handle())?;
+    
+    // ... 其他初始化
+    Ok(())
+})
+```
+
+---
+
 ## 测试验证
 
 1. **公开仓库测试**
