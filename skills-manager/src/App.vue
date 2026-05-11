@@ -38,7 +38,6 @@
           <div class="aside-actions">
             <t-button
               variant="outline"
-              size="small"
               :loading="syncStore.syncing"
               @click="onSyncAll"
             >
@@ -47,7 +46,6 @@
             </t-button>
             <t-button
               variant="outline"
-              size="small"
               @click="showAddRepo = true"
             >
               <add-icon />
@@ -93,15 +91,6 @@
               </template>
             </t-menu-item>
           </t-menu-group>
-
-          <t-divider />
-
-          <t-menu-item value="settings" @click="showSettings = true">
-            <template #icon>
-              <setting-icon />
-            </template>
-            设置
-          </t-menu-item>
         </t-menu>
 
         <!-- Empty state -->
