@@ -9,10 +9,14 @@ pub struct GitResult {
     pub message: String,
 }
 
-/// Clone a repository to the specified path
-pub fn clone_repo(url: &str, path: &PathBuf, auth: &AuthConfig) -> GitResult {
+/// Clone a repository to the specified path with specific branch
+pub fn clone_repo(url: &str, branch: &str, path: &PathBuf, auth: &AuthConfig) -> GitResult {
+    info!("Cloning repository {} branch {} to {}", url, branch, path.to_string_lossy());
+
     let mut cmd = Command::new("git");
     cmd.arg("clone");
+    cmd.arg("--branch");
+    cmd.arg(branch);
     cmd.arg(url);
     cmd.arg(path);
 
@@ -42,22 +46,27 @@ pub fn clone_repo(url: &str, path: &PathBuf, auth: &AuthConfig) -> GitResult {
     match output {
         Ok(o) => {
             if o.status.success() {
+                info!("Repository cloned successfully");
                 GitResult {
                     success: true,
                     message: "Repository cloned successfully".to_string(),
                 }
             } else {
                 let stderr = String::from_utf8_lossy(&o.stderr);
+                error!("Clone failed: {}", stderr);
                 GitResult {
                     success: false,
                     message: stderr.to_string(),
                 }
             }
         }
-        Err(e) => GitResult {
-            success: false,
-            message: format!("Failed to execute git clone: {}", e),
-        },
+        Err(e) => {
+            error!("Failed to execute git clone: {}", e);
+            GitResult {
+                success: false,
+                message: format!("Failed to execute git clone: {}", e),
+            }
+        }
     }
 }
 

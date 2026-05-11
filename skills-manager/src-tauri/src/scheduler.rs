@@ -85,7 +85,7 @@ pub async fn sync_all_repositories(app: AppHandle) -> Result<Vec<String>, String
         let result = if is_git_repo(&repo_path) {
             pull_repo(&repo_path, &repo.auth)
         } else {
-            clone_repo(&repo.url, &repo_path, &repo.auth)
+            clone_repo(&repo.url, &repo.branch, &repo_path, &repo.auth)
         };
 
         if result.success {

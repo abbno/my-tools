@@ -4,13 +4,13 @@ use crate::symlink::{create_symlink, get_skill_source_path, get_skill_target_pat
 use crate::models::{AuthConfig, SkillMeta};
 
 #[tauri::command]
-pub fn fetch_repo_skills(url: String, auth: AuthConfig) -> Result<Vec<SkillMeta>, String> {
+pub fn fetch_repo_skills(url: String, branch: String, auth: AuthConfig) -> Result<Vec<SkillMeta>, String> {
     // Generate a temporary repo ID for preview
     let temp_repo_id = "preview".to_string();
     let temp_path = get_repo_path(&temp_repo_id)?;
 
     // Clone to temporary location
-    let result = clone_repo(&url, &temp_path, &auth);
+    let result = clone_repo(&url, &branch, &temp_path, &auth);
     if !result.success {
         return Err(result.message);
     }
@@ -27,7 +27,7 @@ pub fn fetch_repo_skills(url: String, auth: AuthConfig) -> Result<Vec<SkillMeta>
 }
 
 #[tauri::command]
-pub fn sync_repository(repo_id: String, url: String, auth: AuthConfig) -> Result<Vec<SkillMeta>, String> {
+pub fn sync_repository(repo_id: String, url: String, branch: String, auth: AuthConfig) -> Result<Vec<SkillMeta>, String> {
     let repo_path = get_repo_path(&repo_id)?;
 
     if is_git_repo(&repo_path) {
@@ -38,7 +38,7 @@ pub fn sync_repository(repo_id: String, url: String, auth: AuthConfig) -> Result
         }
     } else {
         // Clone new repo
-        let result = clone_repo(&url, &repo_path, &auth);
+        let result = clone_repo(&url, &branch, &repo_path, &auth);
         if !result.success {
             return Err(result.message);
         }
