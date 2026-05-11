@@ -115,7 +115,6 @@ function handleBack() {
 
 .settings-container :deep(.t-card__body) {
   padding: 24px;
-  overflow-y: auto;
 }
 
 .section-title {
