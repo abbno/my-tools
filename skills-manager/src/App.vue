@@ -41,14 +41,18 @@
               :loading="syncStore.syncing"
               @click="onSyncAll"
             >
-              <refresh-icon />
+              <template #icon>
+                <refresh-icon />
+              </template>
               同步全部
             </t-button>
             <t-button
               variant="outline"
               @click="showAddRepo = true"
             >
-              <add-icon />
+              <template #icon>
+                <add-icon />
+              </template>
               添加
             </t-button>
           </div>
@@ -296,11 +300,13 @@ onUnmounted(() => {
   font-weight: 500;
   color: var(--td-text-color-placeholder);
   letter-spacing: 0.1em;
+  white-space: nowrap;
 }
 
 .aside-actions {
   display: flex;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .repo-menu {
