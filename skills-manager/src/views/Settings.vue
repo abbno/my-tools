@@ -36,7 +36,12 @@
         <div class="settings-content">
           <!-- Agent 配置 -->
           <section id="agent-config" class="settings-section">
-            <div class="section-title">Agent 配置</div>
+            <div class="section-header">
+              <div class="section-title">Agent 配置</div>
+              <t-button size="small" @click="handleAddAgent">
+                添加 Agent
+              </t-button>
+            </div>
             <div v-if="!configStore.config?.agents?.length" class="empty-tip">
               暂无已配置的 Agent
             </div>
@@ -46,10 +51,18 @@
                   <span class="agent-name">{{ agent.name }}</span>
                   <code class="agent-path">{{ agent.path }}</code>
                 </div>
-                <t-switch
-                  :value="getPendingAgentEnabled(agent.id)"
-                  @change="(value: boolean) => handleAgentChange(agent.id, value)"
-                />
+                <div class="agent-actions">
+                  <t-button size="small" variant="text" @click="handleEditAgent(agent)">
+                    编辑
+                  </t-button>
+                  <t-button size="small" variant="text" theme="danger" @click="handleDeleteAgent(agent)">
+                    删除
+                  </t-button>
+                  <t-switch
+                    :value="getPendingAgentEnabled(agent.id)"
+                    @change="(value: boolean) => handleAgentChange(agent.id, value)"
+                  />
+                </div>
               </div>
             </div>
           </section>
@@ -100,6 +113,12 @@
       :cancel-btn="{ content: '继续编辑' }"
       @confirm="handleDiscardChanges"
     />
+
+    <!-- Agent Dialog -->
+    <AgentDialog
+      v-model:visible="showAgentDialog"
+      v-model:editAgent="editingAgent"
+    />
   </div>
 </template>
 
@@ -107,8 +126,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getVersion } from '@tauri-apps/api/app'
+import { DialogPlugin } from 'tdesign-vue-next'
 import { useConfigStore } from '@/stores/config'
-import type { Settings } from '@/api/tauri'
+import type { Settings, Agent } from '@/api/tauri'
+import AgentDialog from '@/components/AgentDialog.vue'
 
 const router = useRouter()
 const configStore = useConfigStore()
@@ -119,6 +140,8 @@ const appVersion = ref('0.1.0')
 const activeSection = ref('agent-config')
 const saving = ref(false)
 const showConfirmDialog = ref(false)
+const showAgentDialog = ref(false)
+const editingAgent = ref<Agent | null>(null)
 
 // Pending state
 const pendingSettings = ref<Partial<Settings>>({})
@@ -241,6 +264,29 @@ function handleSectionChange(value: string) {
   }
 }
 
+function handleAddAgent() {
+  editingAgent.value = null
+  showAgentDialog.value = true
+}
+
+function handleEditAgent(agent: Agent) {
+  editingAgent.value = agent
+  showAgentDialog.value = true
+}
+
+function handleDeleteAgent(agent: Agent) {
+  const confirmDialog = DialogPlugin.confirm({
+    header: '确认删除',
+    body: `确定删除 Agent "${agent.name}"？`,
+    confirmBtn: { content: '删除', theme: 'danger' },
+    cancelBtn: '取消',
+    onConfirm: () => {
+      configStore.removeAgent(agent.id)
+      confirmDialog.hide()
+    },
+  })
+}
+
 // Fetch version on mount
 onMounted(async () => {
   try {
@@ -332,6 +378,27 @@ onMounted(async () => {
   margin-bottom: 16px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--td-component-border);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--td-component-border);
+}
+
+.section-header .section-title {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.agent-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* Agent list */
