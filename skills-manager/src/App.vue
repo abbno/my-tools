@@ -22,7 +22,7 @@
           <t-button
             variant="outline"
             shape="circle"
-            @click="showSettings = true"
+            @click="router.push('/settings')"
           >
             <setting-icon />
           </t-button>
@@ -126,11 +126,11 @@
     @installed="showGitDialog = false"
   />
   <AddRepoDialog v-model:visible="showAddRepo" />
-  <SettingsDialog v-model:visible="showSettings" />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { listen } from '@tauri-apps/api/event'
 import { useConfigStore } from '@/stores/config'
 import { useSkillsStore } from '@/stores/skills'
@@ -138,7 +138,6 @@ import { useSyncStore } from '@/stores/sync'
 import { checkGitInstalled, syncAllRepositories } from '@/api/tauri'
 import GitInstallDialog from '@/components/GitInstallDialog.vue'
 import AddRepoDialog from '@/views/AddRepoDialog.vue'
-import SettingsDialog from '@/components/SettingsDialog.vue'
 import {
   SearchIcon,
   SettingIcon,
@@ -150,11 +149,11 @@ import {
 const configStore = useConfigStore()
 const skillsStore = useSkillsStore()
 const syncStore = useSyncStore()
+const router = useRouter()
 
 // Dialog visibility
 const showGitDialog = ref(false)
 const showAddRepo = ref(false)
-const showSettings = ref(false)
 
 // Local search query
 const searchQuery = ref('')
