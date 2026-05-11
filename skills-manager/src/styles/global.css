@@ -8,9 +8,7 @@
 
   /* Layout colors using TDesign tokens */
   --bg-deep: var(--td-bg-color-page);
-  --bg-primary: var(--td-bg-color-container);
   --bg-secondary: var(--td-bg-color-secondarycontainer);
-  --border-subtle: var(--td-component-border);
 }
 
 /* 基础布局 */

@@ -242,8 +242,8 @@ onUnmounted(() => {
 /* Header */
 .app-header {
   height: 64px;
-  background: var(--bg-primary);
-  border-bottom: 1px solid var(--border-subtle);
+  background: #fff;
+  border-bottom: 1px solid #e7e7e7;
 }
 
 .header-content {
@@ -288,8 +288,8 @@ onUnmounted(() => {
 /* Sidebar */
 .app-aside {
   width: 260px;
-  background: var(--bg-primary);
-  border-right: 1px solid var(--border-subtle);
+  background: #fff;
+  border-right: 1px solid #e7e7e7;
   display: flex;
   flex-direction: column;
 }
@@ -299,7 +299,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid #e7e7e7;
 }
 
 .aside-label {
