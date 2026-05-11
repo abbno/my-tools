@@ -82,7 +82,7 @@
 
           <div v-else class="skills-panel">
             <div class="skills-header">
-              <span>{{ skills.length }} 个技能</span>
+              <span>已选择 {{ selectedSkills.length }}/{{ skills.length }} 个技能</span>
               <t-link theme="primary" @click="selectAll">
                 {{ selectedSkills.length === skills.length ? '取消全选' : '全选' }}
               </t-link>
