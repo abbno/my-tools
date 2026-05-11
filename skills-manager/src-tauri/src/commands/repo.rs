@@ -35,24 +35,39 @@ pub fn fetch_repo_skills(url: String, branch: String, auth: AuthConfig) -> Resul
 
 #[tauri::command]
 pub fn sync_repository(repo_id: String, url: String, branch: String, auth: AuthConfig) -> Result<Vec<SkillMeta>, String> {
+    info!("Syncing repository {} branch {}", repo_id, branch);
+
     let repo_path = get_repo_path(&repo_id)?;
 
     if is_git_repo(&repo_path) {
+        // Ensure we're on the correct branch
+        let checkout_result = checkout_branch(&repo_path, &branch);
+        if !checkout_result.success {
+            error!("Checkout failed: {}", checkout_result.message);
+            return Err(checkout_result.message);
+        }
+
         // Pull existing repo
         let result = pull_repo(&repo_path, &auth);
         if !result.success {
+            error!("Pull failed: {}", result.message);
             return Err(result.message);
         }
+        info!("Pull successful");
     } else {
-        // Clone new repo
+        // Clone new repo with specific branch
         let result = clone_repo(&url, &branch, &repo_path, &auth);
         if !result.success {
+            error!("Clone failed: {}", result.message);
             return Err(result.message);
         }
+        info!("Clone successful");
     }
 
     // Scan for skills
+    info!("Scanning skills in {}", repo_path.to_string_lossy());
     let skills = scan_skills(&repo_path, &repo_id);
+    info!("Found {} skills", skills.len());
 
     Ok(skills)
 }
