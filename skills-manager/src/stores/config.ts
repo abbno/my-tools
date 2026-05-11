@@ -83,6 +83,27 @@ export const useConfigStore = defineStore('config', () => {
     }
   }
 
+  function addAgent(agent: Agent) {
+    if (!config.value) return
+    config.value.agents.push(agent)
+    saveConfigData()
+  }
+
+  function updateAgentInfo(agentId: string, updates: { name?: string; path?: string }) {
+    if (!config.value) return
+    const agent = config.value.agents.find(a => a.id === agentId)
+    if (agent) {
+      Object.assign(agent, updates)
+      saveConfigData()
+    }
+  }
+
+  function removeAgent(agentId: string) {
+    if (!config.value) return
+    config.value.agents = config.value.agents.filter(a => a.id !== agentId)
+    saveConfigData()
+  }
+
   return {
     config,
     loading,
@@ -96,5 +117,8 @@ export const useConfigStore = defineStore('config', () => {
     updateSettings,
     batchUpdateSettings,
     batchUpdateAgents,
+    addAgent,
+    updateAgentInfo,
+    removeAgent,
   }
 })
