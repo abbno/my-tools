@@ -139,7 +139,7 @@ import { listen } from '@tauri-apps/api/event'
 import { useConfigStore } from '@/stores/config'
 import { useSkillsStore } from '@/stores/skills'
 import { useSyncStore } from '@/stores/sync'
-import { checkGitInstalled, syncAllRepositories } from '@/api/tauri'
+import { checkGitInstalled, getSkills, syncAllRepositories } from '@/api/tauri'
 import GitInstallDialog from '@/components/GitInstallDialog.vue'
 import AddRepoDialog from '@/views/AddRepoDialog.vue'
 import {
@@ -208,7 +208,23 @@ async function onSyncAll() {
 
 onMounted(async () => {
   // Load config
-  configStore.loadConfig()
+  await configStore.loadConfig()
+
+  // Load skills from database (no need to sync on startup)
+  if (configStore.config?.repositories?.length) {
+    for (const repo of configStore.config.repositories) {
+      try {
+        const skills = await getSkills(repo.id)
+        skillsStore.addSkills(skills)
+      } catch (e) {
+        console.error('Failed to load skills for repo:', repo.name, e)
+      }
+    }
+    // Select first repo if none selected
+    if (!skillsStore.currentRepoId && configStore.config.repositories.length > 0) {
+      skillsStore.setCurrentRepo(configStore.config.repositories[0].id)
+    }
+  }
 
   // Check git installation
   try {
