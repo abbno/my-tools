@@ -5,6 +5,7 @@ pub mod skill_parser;
 pub mod symlink;
 pub mod scheduler;
 pub mod logger;
+pub mod db;
 
 use tauri::Manager;
 use scheduler::start_scheduler;
