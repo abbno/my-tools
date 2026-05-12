@@ -34,7 +34,7 @@ pub fn fetch_repo_skills(url: String, branch: String, auth: AuthConfig) -> Resul
 }
 
 #[tauri::command]
-pub fn sync_repository(repo_id: String, url: String, branch: String, auth: AuthConfig) -> Result<Vec<SkillMeta>, String> {
+pub fn sync_repository(repo_id: String, url: String, branch: String, auth: AuthConfig, selected_skills: Vec<String>) -> Result<Vec<SkillMeta>, String> {
     info!("Syncing repository {} branch {}", repo_id, branch);
 
     let repo_path = get_repo_path(&repo_id)?;
@@ -69,7 +69,14 @@ pub fn sync_repository(repo_id: String, url: String, branch: String, auth: AuthC
     let skills = scan_skills(&repo_path, &repo_id);
     info!("Found {} skills", skills.len());
 
-    Ok(skills)
+    // Persist skills to database
+    let conn = crate::db::connection::get_connection()?;
+    crate::db::skills::sync_skills(&conn, &repo_id, &skills, &selected_skills)?;
+    info!("Saved {} skills to database", skills.len());
+
+    // Return skills with updated selection status from database
+    let saved_skills = crate::db::skills::get_by_repo(&conn, &repo_id)?;
+    Ok(saved_skills)
 }
 
 #[tauri::command]
