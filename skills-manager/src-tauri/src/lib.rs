@@ -21,6 +21,9 @@ pub fn run() {
                 window.open_devtools();
             }
 
+            // Initialize database
+            crate::db::init_database().expect("Failed to initialize database");
+
             // 初始化日志系统
             logger::init_logger(app.handle())?;
 
@@ -39,6 +42,9 @@ pub fn run() {
             commands::sync_repository,
             commands::deploy_skill,
             commands::undeploy_skill,
+            commands::get_skills,
+            commands::update_skill_selection,
+            commands::clear_repo_skills,
             symlink::create_skill_symlink,
             symlink::remove_skill_symlink,
             symlink::check_symlinks,
