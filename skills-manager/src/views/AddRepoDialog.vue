@@ -69,7 +69,7 @@
         </div>
 
         <!-- Step 2: Select Skills -->
-        <div v-if="currentStep === 2" class="step-content">
+        <div v-if="currentStep === 2" class="step-content step-skills">
           <div v-if="loading" class="loading-container">
             <t-loading text="正在获取仓库中的技能..." />
           </div>
@@ -80,33 +80,31 @@
             </template>
           </t-alert>
 
-          <div v-else class="skills-panel">
-            <div class="skills-header">
-              <span>已选择 {{ selectedSkills.length }}/{{ skills.length }} 个技能</span>
-              <t-link theme="primary" @click="selectAll">
-                {{ selectedSkills.length === skills.length ? '取消全选' : '全选' }}
-              </t-link>
-            </div>
-            <t-checkbox-group v-model="selectedSkills" class="skills-list">
-              <t-checkbox
-                v-for="skill in skills"
-                :key="skill.path"
-                :value="skill.path"
-                class="skill-item"
-              >
-                <div class="skill-info">
-                  <span class="skill-name">{{ skill.name }}</span>
-                  <span class="skill-desc">{{ skill.description || '暂无描述' }}</span>
-                </div>
-              </t-checkbox>
-            </t-checkbox-group>
+          <div v-else class="skills-header">
+            <span>已选择 {{ selectedSkills.length }}/{{ skills.length }} 个技能</span>
+            <t-link theme="primary" @click="selectAll">
+              {{ selectedSkills.length === skills.length ? '取消全选' : '全选' }}
+            </t-link>
           </div>
+          <t-checkbox-group v-if="!loading && !error" v-model="selectedSkills" class="skills-list">
+            <t-checkbox
+              v-for="skill in skills"
+              :key="skill.path"
+              :value="skill.path"
+              class="skill-item"
+            >
+              <div class="skill-info">
+                <span class="skill-name">{{ skill.name }}</span>
+                <span class="skill-desc">{{ skill.description || '暂无描述' }}</span>
+              </div>
+            </t-checkbox>
+          </t-checkbox-group>
         </div>
 
         <!-- Step 3: Summary -->
         <div v-if="currentStep === 3" class="step-content">
           <t-descriptions title="汇总" :column="2" bordered>
-            <t-descriptions-item label="名称">{{ generatedName }}</t-descriptions-item>
+            <t-descriptions-item label="名称" :span="2">{{ generatedName }}</t-descriptions-item>
             <t-descriptions-item label="地址" :span="2">
               <code class="url-code">{{ formData.url }}</code>
             </t-descriptions-item>
@@ -177,11 +175,13 @@ import { ref, computed, watch } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useConfigStore } from '@/stores/config'
 import { useSkillsStore } from '@/stores/skills'
-import { fetchBranches, fetchRepoSkills, type SkillMeta, type AuthConfig } from '@/api/tauri'
+import { useSyncStore } from '@/stores/sync'
+import { fetchBranches, fetchRepoSkills, syncRepository, type SkillMeta, type AuthConfig } from '@/api/tauri'
 import { v4 as uuidv4 } from 'uuid'
 
 const configStore = useConfigStore()
 const skillsStore = useSkillsStore()
+const syncStore = useSyncStore()
 
 const visible = defineModel<boolean>('visible', { default: false })
 
@@ -223,10 +223,10 @@ const generatedName = computed(() => {
     .replace(/^git@/, '')
     .replace(/\.git$/, '')
 
-  // Remove domain
+  // Remove domain, keep owner/repo
   const parts = name.split('/')
-  if (parts.length >= 3) {
-    name = parts.slice(2).join('/')
+  if (parts.length >= 2) {
+    name = parts.slice(1).join('/')
   }
 
   return `${name}(${branch})`
@@ -339,8 +339,9 @@ async function onConfirm() {
 
 async function onSave() {
   const auth = getAuthConfig()
+  const repoId = uuidv4()
   configStore.addRepository({
-    id: uuidv4(),
+    id: repoId,
     name: generatedName.value,
     url: formData.value.url,
     branch: formData.value.branch,
@@ -350,10 +351,21 @@ async function onSave() {
     last_sync: null,
     enabled: true,
   })
-  MessagePlugin.success('仓库添加成功')
+
+  // Sync the new repository
+  syncStore.startSync(repoId)
+  try {
+    const skills = await syncRepository(repoId, formData.value.url, formData.value.branch, auth, selectedSkills.value)
+    skillsStore.addSkills(skills)
+    syncStore.endSync(repoId)
+    MessagePlugin.success('仓库添加成功')
+  } catch (e) {
+    syncStore.setError(repoId, String(e))
+    MessagePlugin.warning('仓库已添加，但同步失败：' + String(e))
+  }
 
   // Select the new repo
-  skillsStore.setCurrentRepo(configStore.config?.repositories?.slice(-1)[0]?.id || null)
+  skillsStore.setCurrentRepo(repoId)
 
   visible.value = false
 }
@@ -398,6 +410,10 @@ function onClose() {
   flex-direction: column;
 }
 
+.step-skills {
+  padding-top: 0;
+}
+
 .loading-container {
   display: flex;
   justify-content: center;
@@ -406,15 +422,7 @@ function onClose() {
   flex: 1;
 }
 
-.skills-panel {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-
 .skills-header {
-  flex-shrink: 0;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -428,17 +436,11 @@ function onClose() {
   color: var(--td-text-color-secondary);
 }
 
-.skills-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
 .skills-list :deep(.t-checkbox-group) {
   display: flex !important;
   flex-direction: column !important;
   gap: 8px;
+  padding-top: 16px;
 }
 
 .skill-item {
@@ -475,10 +477,10 @@ function onClose() {
 
 .url-code {
   font-family: var(--td-font-family-mono);
-  font-size: 12px;
-  background: var(--td-bg-color-specialcomponent);
-  padding: 4px 8px;
-  border-radius: 4px;
+}
+
+.step-content :deep(.t-descriptions__body .t-descriptions-item__content) {
+  text-align: left;
 }
 
 .selected-skills {
