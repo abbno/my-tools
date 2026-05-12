@@ -13,10 +13,13 @@ export interface SystemInfo {
 }
 
 export interface SkillMeta {
+  id: string
+  repo_id: string
   name: string
   description: string
   path: string
-  repo_id: string
+  local_path: string
+  is_selected: boolean
 }
 
 export interface AuthConfig {
@@ -75,8 +78,23 @@ export async function fetchRepoSkills(url: string, branch: string, auth: AuthCon
   return invoke<SkillMeta[]>('fetch_repo_skills', { url, branch, auth })
 }
 
-export async function syncRepository(repoId: string, url: string, branch: string, auth: AuthConfig): Promise<SkillMeta[]> {
-  return invoke<SkillMeta[]>('sync_repository', { repoId, url, branch, auth })
+export async function syncRepository(
+  repoId: string,
+  url: string,
+  branch: string,
+  auth: AuthConfig,
+  selectedSkills: string[] = []
+): Promise<SkillMeta[]> {
+  return invoke<SkillMeta[]>('sync_repository', { repoId, url, branch, auth, selectedSkills })
+}
+
+// SQLite skills API
+export async function getSkills(repoId: string): Promise<SkillMeta[]> {
+  return invoke<SkillMeta[]>('get_skills', { repoId })
+}
+
+export async function updateSkillSelection(skillId: string, isSelected: boolean): Promise<void> {
+  return invoke<void>('update_skill_selection', { skillId, isSelected })
 }
 
 // Symlink commands

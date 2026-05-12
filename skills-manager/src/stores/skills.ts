@@ -2,10 +2,13 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 
 export interface SkillMeta {
+  id: string
+  repo_id: string
   name: string
   description: string
   path: string
-  repo_id: string
+  local_path: string
+  is_selected: boolean
 }
 
 export const useSkillsStore = defineStore('skills', () => {
@@ -16,6 +19,13 @@ export const useSkillsStore = defineStore('skills', () => {
 
   function setSkills(skillsList: SkillMeta[]) {
     skills.value = skillsList
+  }
+
+  function addSkills(skillsList: SkillMeta[]) {
+    // Remove existing skills from the same repo, then add new ones
+    const existingRepoIds = skillsList.map(s => s.repo_id)
+    skills.value = skills.value.filter(s => !existingRepoIds.includes(s.repo_id))
+    skills.value = [...skills.value, ...skillsList]
   }
 
   function setCurrentRepo(repoId: string | null) {
@@ -40,15 +50,24 @@ export const useSkillsStore = defineStore('skills', () => {
     )
   }
 
+  function updateSkillIsSelected(skillId: string, isSelected: boolean) {
+    const skill = skills.value.find(s => s.id === skillId)
+    if (skill) {
+      skill.is_selected = isSelected
+    }
+  }
+
   return {
     skills,
     currentRepoId,
     selectedSkill,
     searchQuery,
     setSkills,
+    addSkills,
     setCurrentRepo,
     selectSkill,
     setSearchQuery,
     filteredSkills,
+    updateSkillIsSelected,
   }
 })
