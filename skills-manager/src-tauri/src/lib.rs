@@ -7,6 +7,8 @@ pub mod scheduler;
 pub mod logger;
 pub mod db;
 
+#[cfg(debug_assertions)]
+use tauri::Manager;
 use scheduler::start_scheduler;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
