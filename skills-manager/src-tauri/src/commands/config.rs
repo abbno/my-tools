@@ -1,52 +1,72 @@
-use crate::models::Config;
-use std::fs;
-use std::path::PathBuf;
-
-fn get_config_path() -> Result<PathBuf, String> {
-    let home_dir = if cfg!(target_os = "windows") {
-        std::env::var("USERPROFILE").map_err(|e| e.to_string())
-    } else {
-        std::env::var("HOME").map_err(|e| e.to_string())
-    }?;
-
-    let skill_manager_dir = PathBuf::from(home_dir).join(".skill-manager");
-
-    // Ensure directory exists
-    if !skill_manager_dir.exists() {
-        fs::create_dir_all(&skill_manager_dir)
-            .map_err(|e| format!("Failed to create skill-manager directory: {}", e))?;
-    }
-
-    Ok(skill_manager_dir.join("config.json"))
-}
+use crate::db::{connection::get_connection, repositories, agents, settings, skills};
+use crate::models::{Config, Repository, SkillMeta};
 
 #[tauri::command]
 pub fn read_config() -> Result<Config, String> {
-    let config_path = get_config_path()?;
+    let conn = get_connection()?;
 
-    if config_path.exists() {
-        let content = fs::read_to_string(&config_path)
-            .map_err(|e| format!("Failed to read config: {}", e))?;
+    let repos = repositories::get_all(&conn)?;
+    let agents_list = agents::get_all(&conn)?;
+    let app_settings = settings::get_all(&conn)?;
 
-        let config: Config = serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse config: {}", e))?;
+    // Populate selected_skills for each repository
+    let repos_with_skills = repos.into_iter().map(|repo| {
+        let selected_paths = skills::get_selected_paths(&conn, &repo.id).unwrap_or_default();
+        Repository {
+            selected_skills: selected_paths,
+            ..repo
+        }
+    }).collect();
 
-        Ok(config)
-    } else {
-        // Return default config
-        Ok(Config::default())
-    }
+    Ok(Config {
+        repositories: repos_with_skills,
+        agents: agents_list,
+        settings: app_settings,
+    })
 }
 
 #[tauri::command]
 pub fn save_config(config: Config) -> Result<(), String> {
-    let config_path = get_config_path()?;
+    let conn = get_connection()?;
 
-    let content = serde_json::to_string_pretty(&config)
-        .map_err(|e| format!("Failed to serialize config: {}", e))?;
+    // Update repositories
+    for repo in &config.repositories {
+        if repositories::get_by_id(&conn, &repo.id)?.is_some() {
+            repositories::update(&conn, repo)?;
+        } else {
+            repositories::insert(&conn, repo)?;
+        }
+    }
 
-    fs::write(&config_path, content)
-        .map_err(|e| format!("Failed to write config: {}", e))?;
+    // Update agents
+    for agent in &config.agents {
+        if agents::get_by_id(&conn, &agent.id)?.is_some() {
+            agents::update(&conn, agent)?;
+        } else {
+            agents::insert(&conn, agent)?;
+        }
+    }
+
+    // Update settings
+    settings::update_settings(&conn, &config.settings)?;
 
     Ok(())
+}
+
+#[tauri::command]
+pub fn get_skills(repo_id: String) -> Result<Vec<SkillMeta>, String> {
+    let conn = get_connection()?;
+    skills::get_by_repo(&conn, &repo_id)
+}
+
+#[tauri::command]
+pub fn update_skill_selection(skill_id: String, is_selected: bool) -> Result<(), String> {
+    let conn = get_connection()?;
+    skills::update_selection(&conn, &skill_id, is_selected)
+}
+
+#[tauri::command]
+pub fn clear_repo_skills(repo_id: String) -> Result<(), String> {
+    let conn = get_connection()?;
+    skills::clear_by_repo(&conn, &repo_id)
 }
