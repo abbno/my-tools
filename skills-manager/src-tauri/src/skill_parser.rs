@@ -5,51 +5,95 @@ use std::path::PathBuf;
 /// Parse SKILL.md frontmatter to extract metadata
 pub fn parse_skill_md(content: &str) -> Option<SkillMeta> {
     // Look for YAML frontmatter between --- markers
-    let lines = content.lines();
-    let mut in_frontmatter = false;
-    let mut frontmatter_lines: Vec<String> = Vec::new();
-    let mut found_first_marker = false;
+    let lines: Vec<&str> = content.lines().collect();
+    let mut start_idx = 0;
+    let mut end_idx = 0;
 
-    for line in lines {
+    // Find frontmatter boundaries
+    for (i, line) in lines.iter().enumerate() {
         if line.trim() == "---" {
-            if !found_first_marker {
-                found_first_marker = true;
-                in_frontmatter = true;
-                continue;
-            } else if in_frontmatter {
-                // End of frontmatter
+            if start_idx == 0 {
+                start_idx = i + 1;
+            } else {
+                end_idx = i;
                 break;
             }
         }
-
-        if in_frontmatter {
-            frontmatter_lines.push(line.to_string());
-        }
     }
 
-    if frontmatter_lines.is_empty() {
+    if start_idx == 0 || end_idx == 0 || start_idx >= end_idx {
         return None;
     }
 
-    // Parse frontmatter (simple YAML parsing)
+    let frontmatter_lines = &lines[start_idx..end_idx];
+
+    // Parse frontmatter with support for multi-line values
     let mut name: Option<String> = None;
     let mut description: Option<String> = None;
 
-    for line in frontmatter_lines {
-        let line = line.trim();
-        if line.starts_with("name:") {
-            name = Some(line[5..].trim().to_string());
-        } else if line.starts_with("description:") {
-            description = Some(line[12..].trim().to_string());
+    let mut i = 0;
+    while i < frontmatter_lines.len() {
+        let line = frontmatter_lines[i];
+        let trimmed = line.trim();
+
+        if trimmed.starts_with("name:") {
+            let value = trimmed[5..].trim();
+            // Handle quoted values
+            if value.starts_with('"') && value.ends_with('"') {
+                name = Some(value[1..value.len()-1].to_string());
+            } else if value.starts_with("'") && value.ends_with("'") {
+                name = Some(value[1..value.len()-1].to_string());
+            } else {
+                name = Some(value.to_string());
+            }
+            i += 1;
+        } else if trimmed.starts_with("description:") {
+            let rest = trimmed[12..].trim();
+
+            // Handle multi-line block scalars (> or |)
+            if rest == ">" || rest == "|" || rest.is_empty() {
+                // Collect indented lines
+                let mut desc_lines: Vec<String> = Vec::new();
+                i += 1;
+                while i < frontmatter_lines.len() {
+                    let next_line = frontmatter_lines[i];
+                    // Check if line is indented (part of multi-line value)
+                    if next_line.starts_with("  ") || next_line.starts_with("    ") || next_line.trim().is_empty() {
+                        if !next_line.trim().is_empty() {
+                            desc_lines.push(next_line.trim().to_string());
+                        }
+                        i += 1;
+                    } else {
+                        // End of multi-line value
+                        break;
+                    }
+                }
+                description = Some(desc_lines.join(" ").trim().to_string());
+            } else {
+                // Single-line value (possibly quoted)
+                if rest.starts_with('"') && rest.ends_with('"') {
+                    description = Some(rest[1..rest.len()-1].to_string());
+                } else if rest.starts_with("'") && rest.ends_with("'") {
+                    description = Some(rest[1..rest.len()-1].to_string());
+                } else {
+                    description = Some(rest.to_string());
+                }
+                i += 1;
+            }
+        } else {
+            i += 1;
         }
     }
 
     if let (Some(name), Some(description)) = (name, description) {
         Some(SkillMeta {
+            id: String::new(), // Will be generated when syncing to DB
             name,
             description,
             path: String::new(), // Will be set by caller
+            local_path: String::new(), // Will be set by caller
             repo_id: String::new(), // Will be set by caller
+            is_selected: false,
         })
     } else {
         None
@@ -79,11 +123,15 @@ fn scan_skills_recursive(dir_path: &PathBuf, repo_id: &str, skills: &mut Vec<Ski
                 if let Ok(content) = content {
                     if let Some(meta) = parse_skill_md(&content) {
                         let skill_name = path.file_name().unwrap().to_string_lossy().to_string();
+                        let local_path = path.to_string_lossy().to_string();
                         skills.push(SkillMeta {
+                            id: String::new(), // Will be generated when syncing to DB
                             name: meta.name,
                             description: meta.description,
                             path: skill_name,
+                            local_path,
                             repo_id: repo_id.to_string(),
+                            is_selected: false,
                         });
                     }
                 }
