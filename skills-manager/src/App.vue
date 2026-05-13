@@ -77,24 +77,35 @@
               </template>
               <span class="repo-name">{{ repo.name }}</span>
               <template #suffix>
-                <span
-                  v-if="getSyncStatus(repo.id) === 'syncing'"
-                  class="status-syncing"
-                >
-                  <t-loading size="small" />
-                </span>
-                <span
-                  v-else-if="getSyncStatus(repo.id) === 'success'"
-                  class="status-success"
-                >
-                  ✓
-                </span>
-                <span
-                  v-else-if="getSyncStatus(repo.id) === 'error'"
-                  class="status-error"
-                >
-                  ✗
-                </span>
+                <div class="repo-suffix">
+                  <span
+                    v-if="getSyncStatus(repo.id) === 'syncing'"
+                    class="status-syncing"
+                  >
+                    <t-loading size="small" />
+                  </span>
+                  <span
+                    v-else-if="getSyncStatus(repo.id) === 'success'"
+                    class="status-success"
+                  >
+                    ✓
+                  </span>
+                  <span
+                    v-else-if="getSyncStatus(repo.id) === 'error'"
+                    class="status-error"
+                  >
+                    ✗
+                  </span>
+                  <t-button
+                    class="delete-btn"
+                    variant="text"
+                    size="small"
+                    shape="circle"
+                    @click.stop="confirmDeleteRepo(repo.id)"
+                  >
+                    <close-icon />
+                  </t-button>
+                </div>
               </template>
             </t-menu-item>
           </t-menu-group>
@@ -130,6 +141,14 @@
     @installed="showGitDialog = false"
   />
   <AddRepoDialog v-model:visible="showAddRepo" />
+  <t-dialog
+    v-model:visible="showDeleteConfirm"
+    header="确认删除"
+    body="确定要删除此仓库吗？删除后该仓库的技能数据将被清除。"
+    :confirm-btn="{ content: '删除', theme: 'danger' }"
+    cancel-btn="取消"
+    @confirm="onDeleteRepo"
+  />
 </template>
 
 <script setup lang="ts">
@@ -148,6 +167,7 @@ import {
   FolderIcon,
   AddIcon,
   RefreshIcon,
+  CloseIcon,
 } from 'tdesign-icons-vue-next'
 
 const configStore = useConfigStore()
@@ -162,6 +182,34 @@ const isSettingsPage = computed(() => route.path === '/settings')
 // Dialog visibility
 const showGitDialog = ref(false)
 const showAddRepo = ref(false)
+
+// Delete repository state
+const showDeleteConfirm = ref(false)
+const repoToDelete = ref<string | null>(null)
+
+function confirmDeleteRepo(repoId: string) {
+  repoToDelete.value = repoId
+  showDeleteConfirm.value = true
+}
+
+async function onDeleteRepo() {
+  if (!repoToDelete.value) return
+
+  // Remove skills from this repo
+  skillsStore.skills = skillsStore.skills.filter(s => s.repo_id !== repoToDelete.value)
+
+  // Remove repository
+  configStore.removeRepository(repoToDelete.value)
+
+  // If deleted repo was selected, select another
+  if (skillsStore.currentRepoId === repoToDelete.value) {
+    const firstRepo = configStore.config?.repositories?.[0]?.id
+    skillsStore.setCurrentRepo(firstRepo || null)
+  }
+
+  showDeleteConfirm.value = false
+  repoToDelete.value = null
+}
 
 // Local search query
 const searchQuery = ref('')
@@ -338,6 +386,21 @@ onUnmounted(() => {
   flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.repo-suffix {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.delete-btn {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+:deep(.t-menu-item:hover) .delete-btn {
+  opacity: 1;
 }
 
 .status-syncing {
