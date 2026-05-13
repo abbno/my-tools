@@ -97,6 +97,11 @@ export async function updateSkillSelection(skillId: string, isSelected: boolean)
   return invoke<void>('update_skill_selection', { skillId, isSelected })
 }
 
+// Read skill content API
+export async function readSkillContent(repoId: string, skillPath: string): Promise<string> {
+  return invoke<string>('read_skill_content', { repoId, skillPath })
+}
+
 // Symlink commands
 export interface SymlinkStatus {
   skill_name: string
