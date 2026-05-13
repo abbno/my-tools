@@ -1,7 +1,7 @@
 <!-- skills-manager/src/components/SkillCard.vue -->
 <template>
   <t-card
-    :class="['skill-card', { selected: selected }]"
+    :class="['skill-card', { selected: selected, 'is-selected-skill': skill.is_selected }]"
     :bordered="true"
     :hover-shadow="true"
     role="button"
@@ -11,6 +11,11 @@
     @keydown.enter="onClick"
     @keydown.space.prevent="onClick"
   >
+    <!-- Selection badge -->
+    <div v-if="skill.is_selected" class="selection-badge">
+      <t-tag theme="primary" size="small" variant="light">已选</t-tag>
+    </div>
+
     <template #header>
       <div class="card-header">
         <span class="skill-icon">◈</span>
@@ -50,11 +55,12 @@ function onClick() {
 
 <style scoped>
 .skill-card {
+  position: relative;
   background: #fff;
   border: 1px solid #e7e7e7;
   border-radius: 6px;
   cursor: pointer;
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .skill-card:hover {
@@ -64,6 +70,17 @@ function onClick() {
 .skill-card.selected {
   border-color: var(--td-brand-color);
   box-shadow: 0 0 0 2px var(--td-brand-color-focus);
+}
+
+.skill-card.is-selected-skill {
+  border-color: var(--td-brand-color);
+}
+
+.selection-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
 }
 
 .skill-card:focus-visible {

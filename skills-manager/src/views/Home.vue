@@ -47,6 +47,7 @@ import SkillCard from '@/components/SkillCard.vue'
 import SkillDetailPanel from '@/components/SkillDetailPanel.vue'
 import AddRepoDialog from '@/views/AddRepoDialog.vue'
 import type { SkillMeta } from '@/stores/skills'
+import { updateSkillSelection } from '@/api/tauri'
 
 const configStore = useConfigStore()
 const skillsStore = useSkillsStore()
@@ -94,7 +95,18 @@ function getRepoName(repoId: string): string {
   )
 }
 
-function onSkillClick(skill: SkillMeta) {
+async function onSkillClick(skill: SkillMeta) {
+  // Toggle selection
+  const newSelected = !skill.is_selected
+
+  try {
+    await updateSkillSelection(skill.id, newSelected)
+    skillsStore.updateSkillIsSelected(skill.id, newSelected)
+  } catch (e) {
+    console.error('Failed to update selection:', e)
+  }
+
+  // Also set as selected for detail panel
   skillsStore.selectSkill(skill)
 }
 
