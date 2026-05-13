@@ -51,6 +51,13 @@
 
       <!-- Footer -->
       <footer class="panel-footer">
+        <div class="selection-toggle">
+          <span class="toggle-label">已选状态</span>
+          <t-switch
+            :value="skill?.is_selected"
+            @change="onToggleSelection"
+          />
+        </div>
         <t-button theme="primary" @click="onOpenInEditor">
           <template #icon><BrowseIcon /></template>
           在编辑器中打开
@@ -68,8 +75,11 @@
 import { ref, watch, computed } from 'vue'
 import { CloseIcon, BrowseIcon, RefreshIcon } from 'tdesign-icons-vue-next'
 import { marked } from 'marked'
-import { readSkillContent } from '@/api/tauri'
+import { readSkillContent, updateSkillSelection } from '@/api/tauri'
+import { useSkillsStore } from '@/stores/skills'
 import type { SkillMeta } from '@/stores/skills'
+
+const skillsStore = useSkillsStore()
 
 const props = defineProps<{
   skill: SkillMeta | null
@@ -130,6 +140,17 @@ function onRefresh() {
       .then(content => skillContent.value = content)
       .catch(e => error.value = String(e))
       .finally(() => loading.value = false)
+  }
+}
+
+async function onToggleSelection() {
+  if (!props.skill) return
+  const newSelected = !props.skill.is_selected
+  try {
+    await updateSkillSelection(props.skill.id, newSelected)
+    skillsStore.updateSkillIsSelected(props.skill.id, newSelected)
+  } catch (e) {
+    console.error('Failed to update selection:', e)
   }
 }
 </script>
@@ -364,6 +385,19 @@ function onRefresh() {
   border-top: 1px solid var(--border-subtle);
   display: flex;
   gap: var(--space-md);
+  align-items: center;
+}
+
+.selection-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-right: auto;
+}
+
+.toggle-label {
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 /* Slide transition */
