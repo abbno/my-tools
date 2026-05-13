@@ -376,6 +376,6 @@ onUnmounted(() => {
 /* Content */
 .app-content {
   background: var(--bg-deep);
-  overflow: hidden;
+  overflow-y: auto;
 }
 </style>

@@ -106,7 +106,8 @@ function onPanelClose() {
 <style scoped>
 .home-content {
   padding: 24px;
-  min-height: 100%;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .skill-grid {
