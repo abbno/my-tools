@@ -46,6 +46,7 @@ pub fn run() {
             commands::get_skills,
             commands::update_skill_selection,
             commands::clear_repo_skills,
+            commands::read_skill_content,
             symlink::create_skill_symlink,
             symlink::remove_skill_symlink,
             symlink::check_symlinks,
