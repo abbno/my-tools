@@ -11,6 +11,8 @@ import type {
   ConnectionLog,
   TunnelInfo,
   UpdateInfo,
+  TestConnectionRequest,
+  TestConnectionResult,
 } from '@/types'
 
 // ============================================
@@ -566,4 +568,27 @@ export async function saveAppSetting(key: string, value: string): Promise<void> 
  */
 export async function deleteAppSetting(key: string): Promise<void> {
   await invoke('delete_app_setting', { key })
+}
+
+// ============================================
+// SSH 连接测试 API
+// ============================================
+
+/**
+ * 测试 SSH 连接配置
+ */
+export async function testSshConnection(request: TestConnectionRequest): Promise<TestConnectionResult> {
+  // 转换为后端期望的 snake_case 格式
+  const dto = {
+    host: request.host,
+    port: request.port,
+    username: request.username,
+    auth_type: request.authType,
+    password: request.password,
+    key_path: request.keyPath,
+    key_passphrase: request.keyPassphrase,
+    local_host: request.localHost,
+    local_port: request.localPort,
+  }
+  return await invoke<TestConnectionResult>('test_ssh_connection', { request: dto })
 }
