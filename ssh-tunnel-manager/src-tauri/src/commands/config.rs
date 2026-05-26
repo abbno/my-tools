@@ -585,3 +585,41 @@ fn parse_ssh_error(stderr: &str) -> String {
         format!("SSH 登录失败: {}", first_line)
     }
 }
+
+/// SSH 密钥设置请求
+#[derive(Debug, Deserialize)]
+pub struct SetupKeyRequest {
+    pub host: String,
+    pub port: i32,
+    pub username: String,
+    pub password: String,
+}
+
+/// SSH 密钥设置结果
+#[derive(Debug, Serialize)]
+pub struct SetupKeyResult {
+    pub success: bool,
+    pub key_path: Option<String>,
+    pub message: String,
+}
+
+/// 设置 SSH 密钥（密码认证转密钥认证）
+#[tauri::command]
+pub async fn setup_ssh_key(request: SetupKeyRequest) -> Result<SetupKeyResult, String> {
+    use crate::ssh::key_setup::{setup_ssh_key as do_setup, SetupKeyRequest as InternalRequest};
+
+    let internal_request = InternalRequest {
+        host: request.host,
+        port: request.port,
+        username: request.username,
+        password: request.password,
+    };
+
+    let result = do_setup(internal_request).await?;
+
+    Ok(SetupKeyResult {
+        success: result.success,
+        key_path: result.key_path,
+        message: result.message,
+    })
+}
