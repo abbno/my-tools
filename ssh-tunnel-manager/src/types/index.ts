@@ -158,3 +158,40 @@ export interface SaveAppSettingRequest {
   key: string
   value: string
 }
+
+// ============================================
+// SSH 连接测试类型定义
+// ============================================
+
+// 测试请求接口
+export interface TestConnectionRequest {
+  host: string
+  port: number
+  username: string
+  authType: string
+  password?: string
+  keyPath?: string
+  keyPassphrase?: string
+  localHost: string
+  localPort: number
+}
+
+// 单步测试结果接口
+export interface TestStepResult {
+  success: boolean
+  message: string
+}
+
+// 测试详情接口
+export interface TestDetails {
+  localPort: TestStepResult
+  tcpConnectivity: TestStepResult
+  sshLogin: TestStepResult
+}
+
+// 测试结果接口
+export interface TestConnectionResult {
+  success: boolean
+  message: string
+  details: TestDetails
+}
