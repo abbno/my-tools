@@ -31,6 +31,43 @@ pub struct ConfigDto {
     pub updated_at: String,
 }
 
+/// SSH 连接测试请求
+#[derive(Debug, Deserialize)]
+pub struct TestConnectionRequest {
+    pub host: String,
+    pub port: i32,
+    pub username: String,
+    pub auth_type: String,
+    pub password: Option<String>,
+    pub key_path: Option<String>,
+    pub key_passphrase: Option<String>,
+    pub local_host: String,
+    pub local_port: i32,
+}
+
+/// 单步测试结果
+#[derive(Debug, Serialize)]
+pub struct TestStepResult {
+    pub success: bool,
+    pub message: String,
+}
+
+/// 测试详情
+#[derive(Debug, Serialize)]
+pub struct TestDetails {
+    pub local_port: TestStepResult,
+    pub tcp_connectivity: TestStepResult,
+    pub ssh_login: TestStepResult,
+}
+
+/// 测试结果
+#[derive(Debug, Serialize)]
+pub struct TestConnectionResult {
+    pub success: bool,
+    pub message: String,
+    pub details: TestDetails,
+}
+
 impl From<Config> for ConfigDto {
     fn from(config: Config) -> Self {
         Self {
