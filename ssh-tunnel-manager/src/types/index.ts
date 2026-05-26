@@ -195,3 +195,22 @@ export interface TestConnectionResult {
   message: string
   details: TestDetails
 }
+
+// ============================================
+// SSH 密钥设置类型定义
+// ============================================
+
+// 密钥设置请求接口
+export interface SetupKeyRequest {
+  host: string
+  port: number
+  username: string
+  password: string
+}
+
+// 密钥设置结果接口
+export interface SetupKeyResult {
+  success: boolean
+  keyPath: string | null
+  message: string
+}

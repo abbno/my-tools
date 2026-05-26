@@ -13,6 +13,8 @@ import type {
   UpdateInfo,
   TestConnectionRequest,
   TestConnectionResult,
+  SetupKeyRequest,
+  SetupKeyResult,
 } from '@/types'
 
 // ============================================
@@ -591,4 +593,21 @@ export async function testSshConnection(request: TestConnectionRequest): Promise
     local_port: request.localPort,
   }
   return await invoke<TestConnectionResult>('test_ssh_connection', { request: dto })
+}
+
+// ============================================
+// SSH 密钥设置 API
+// ============================================
+
+/**
+ * 设置 SSH 密钥（密码认证转密钥认证）
+ */
+export async function setupSshKey(request: SetupKeyRequest): Promise<SetupKeyResult> {
+  const dto = {
+    host: request.host,
+    port: request.port,
+    username: request.username,
+    password: request.password,
+  }
+  return await invoke<SetupKeyResult>('setup_ssh_key', { request: dto })
 }
