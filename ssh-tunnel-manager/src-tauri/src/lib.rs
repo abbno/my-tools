@@ -396,6 +396,7 @@ pub fn run() {
             commands::config::get_favorites,
             commands::config::set_favorite,
             commands::config::reorder_favorites,
+            commands::config::test_ssh_connection,
             // 隧道控制
             commands::tunnel::precheck_tunnel,
             commands::tunnel::start_tunnel,
