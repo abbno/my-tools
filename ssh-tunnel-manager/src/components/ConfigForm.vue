@@ -4,12 +4,22 @@
     :header="isEditMode ? '编辑配置' : '新建配置'"
     placement="right"
     :size="'500px'"
-    :footer="true"
-    :confirm-btn="{ content: '保存', loading: saving }"
-    :on-confirm="handleSubmit"
     :on-close="handleClose"
     @update:visible="emit('update:visible', $event)"
   >
+    <template #footer>
+      <div style="display: flex; gap: 8px;">
+        <t-button variant="outline" :loading="testing" @click="handleTest">
+          测试连接
+        </t-button>
+        <t-button theme="primary" :loading="saving" @click="handleSubmit">
+          保存
+        </t-button>
+        <t-button variant="text" @click="handleClose">
+          取消
+        </t-button>
+      </div>
+    </template>
     <t-form
       ref="formRef"
       :data="formData"
@@ -201,10 +211,11 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import type { FormInstanceFunctions, FormRule } from 'tdesign-vue-next'
-import type { Config, AuthType, TunnelType, CreateConfigRequest, UpdateConfigRequest } from '@/types'
+import type { Config, AuthType, TunnelType, CreateConfigRequest, UpdateConfigRequest, TestConnectionRequest } from '@/types'
 import { useConfigStore } from '@/stores/config'
 import { useGroupStore } from '@/stores/group'
 import { MessagePlugin } from 'tdesign-vue-next'
+import { testSshConnection } from '@/api'
 
 // Props
 const props = defineProps<{
@@ -228,6 +239,9 @@ const formRef = ref<FormInstanceFunctions>()
 
 // 保存状态
 const saving = ref(false)
+
+// 测试状态
+const testing = ref(false)
 
 // 是否为编辑模式
 const isEditMode = computed(() => !!props.config?.id)
@@ -383,6 +397,45 @@ function fillFormData(config: Config | null | undefined) {
     const defaults = defaultFormData()
     defaults.groupId = props.defaultGroupId || null
     formData.value = defaults
+  }
+}
+
+// 构建测试请求
+function buildTestRequest(): TestConnectionRequest {
+  return {
+    host: formData.value.host.trim(),
+    port: formData.value.port,
+    username: formData.value.username.trim(),
+    authType: formData.value.authType,
+    password: formData.value.authType === 'password' ? formData.value.password : undefined,
+    keyPath: formData.value.authType === 'key' ? formData.value.keyPath?.trim() : undefined,
+    keyPassphrase: formData.value.authType === 'key' ? formData.value.keyPassphrase : undefined,
+    localHost: formData.value.localHost.trim(),
+    localPort: formData.value.localPort,
+  }
+}
+
+// 处理测试
+async function handleTest(): Promise<void> {
+  // 先验证必填字段
+  const valid = await formRef.value?.validate()
+  if (valid !== true) {
+    MessagePlugin.warning('请先填写必填信息')
+    return
+  }
+
+  testing.value = true
+  try {
+    const result = await testSshConnection(buildTestRequest())
+    if (result.success) {
+      MessagePlugin.success('连接测试成功')
+    } else {
+      MessagePlugin.error(result.message)
+    }
+  } catch (error) {
+    MessagePlugin.error('测试请求失败: ' + (error as string))
+  } finally {
+    testing.value = false
   }
 }
 
