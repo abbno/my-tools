@@ -1,6 +1,7 @@
 mod autostart;
 mod sidecar;
 mod monitor;
+pub mod key_setup;
 
 use std::collections::HashMap;
 use std::sync::{Mutex, LazyLock};
