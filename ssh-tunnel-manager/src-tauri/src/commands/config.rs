@@ -360,3 +360,184 @@ pub async fn reorder_favorites(orders: Vec<(String, i32)>) -> Result<(), String>
     .map_err(|e| e.to_string())??;
     Ok(())
 }
+
+/// 测试 SSH 连接
+#[tauri::command]
+pub async fn test_ssh_connection(request: TestConnectionRequest) -> Result<TestConnectionResult, String> {
+    use crate::ssh::{is_port_in_use, get_port_process_info, check_remote_connectivity};
+    use crate::utils::logger;
+
+    let host = &request.host;
+    let port = request.port;
+    let username = &request.username;
+    let local_host = &request.local_host;
+    let local_port = request.local_port;
+
+    logger::info(&format!("开始测试 SSH 连接: {}@{}:{}", username, host, port));
+
+    // 1. 检查本地端口
+    let local_port_result = if is_port_in_use(local_host, local_port) {
+        let process_info = get_port_process_info(local_host, local_port);
+        let msg = if let Some(info) = process_info {
+            format!("本地端口 {}:{} 已被占用 (PID: {}, 进程: {})", local_host, local_port, info.pid, info.name)
+        } else {
+            format!("本地端口 {}:{} 已被占用", local_host, local_port)
+        };
+        TestStepResult { success: false, message: msg }
+    } else {
+        TestStepResult { success: true, message: format!("本地端口 {}:{} 可用", local_host, local_port) }
+    };
+
+    // 如果本地端口被占用，直接返回失败
+    if !local_port_result.success {
+        logger::error(&format!("SSH 连接测试失败 [本地端口]: {}", local_port_result.message));
+        return Ok(TestConnectionResult {
+            success: false,
+            message: local_port_result.message.clone(),
+            details: TestDetails {
+                local_port: local_port_result,
+                tcp_connectivity: TestStepResult { success: false, message: "未测试".to_string() },
+                ssh_login: TestStepResult { success: false, message: "未测试".to_string() },
+            },
+        });
+    }
+
+    // 2. 检查 TCP 连通性
+    let tcp_result = match check_remote_connectivity(host, port, 2) {
+        Ok(_) => TestStepResult { success: true, message: format!("远程主机 {}:{} 可达", host, port) },
+        Err(e) => TestStepResult { success: false, message: format!("远程主机 {}:{} 连接失败: {}", host, port, e) },
+    };
+
+    // 如果 TCP 连通性失败，直接返回失败
+    if !tcp_result.success {
+        logger::error(&format!("SSH 连接测试失败 [TCP连通性]: {}", tcp_result.message));
+        return Ok(TestConnectionResult {
+            success: false,
+            message: tcp_result.message.clone(),
+            details: TestDetails {
+                local_port: local_port_result,
+                tcp_connectivity: tcp_result,
+                ssh_login: TestStepResult { success: false, message: "未测试".to_string() },
+            },
+        });
+    }
+
+    // 3. 测试 SSH 登录认证
+    let ssh_result = test_ssh_login(&request);
+
+    // 构建最终结果
+    let success = ssh_result.success;
+    let message = if success {
+        "连接测试成功".to_string()
+    } else {
+        ssh_result.message.clone()
+    };
+
+    if success {
+        logger::info(&format!("SSH 连接测试成功: {}@{}:{}", username, host, port));
+    } else {
+        logger::error(&format!("SSH 连接测试失败 [SSH登录]: {}", ssh_result.message));
+    }
+
+    Ok(TestConnectionResult {
+        success,
+        message,
+        details: TestDetails {
+            local_port: local_port_result,
+            tcp_connectivity: tcp_result,
+            ssh_login: ssh_result,
+        },
+    })
+}
+
+/// 测试 SSH 登录认证
+fn test_ssh_login(request: &TestConnectionRequest) -> TestStepResult {
+    use std::process::Command;
+
+    let host = &request.host;
+    let port = request.port;
+    let username = &request.username;
+    let auth_type = &request.auth_type;
+
+    // 构建 SSH 命令参数
+    let mut args = vec![
+        "-o".to_string(), "BatchMode=yes".to_string(),
+        "-o".to_string(), "ConnectTimeout=10".to_string(),
+        "-o".to_string(), "StrictHostKeyChecking=accept-new".to_string(),
+        "-p".to_string(), port.to_string(),
+        format!("{}@{}", username, host),
+        "exit".to_string(), // 执行 exit 命令，成功登录后立即退出
+    ];
+
+    // 密钥认证：添加密钥路径
+    if auth_type == "key" {
+        if let Some(key_path) = &request.key_path {
+            args.insert(0, "-i".to_string());
+            args.insert(1, key_path.clone());
+        }
+    }
+
+    // Windows: 隐藏窗口
+    #[cfg(target_os = "windows")]
+    let output = {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        Command::new("ssh")
+            .args(&args)
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
+    };
+
+    #[cfg(not(target_os = "windows"))]
+    let output = {
+        Command::new("ssh")
+            .args(&args)
+            .output()
+    };
+
+    match output {
+        Ok(output) => {
+            if output.status.success() {
+                TestStepResult {
+                    success: true,
+                    message: format!("SSH 登录认证成功 ({}认证)", auth_type)
+                }
+            } else {
+                // 解析错误信息
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let error_msg = parse_ssh_error(&stderr);
+                TestStepResult { success: false, message: error_msg }
+            }
+        }
+        Err(e) => {
+            TestStepResult {
+                success: false,
+                message: format!("SSH 命令执行失败: {}", e)
+            }
+        }
+    }
+}
+
+/// 解析 SSH 错误信息
+fn parse_ssh_error(stderr: &str) -> String {
+    // 常见错误模式
+    if stderr.contains("Permission denied") {
+        if stderr.contains("publickey") {
+            "SSH 登录失败: 密钥认证失败，请检查密钥路径和密码".to_string()
+        } else if stderr.contains("password") {
+            "SSH 登录失败: 密码认证失败，请检查用户名和密码".to_string()
+        } else {
+            "SSH 登录失败: 认证被拒绝".to_string()
+        }
+    } else if stderr.contains("Connection timed out") {
+        "SSH 登录超时（10秒）".to_string()
+    } else if stderr.contains("Host key verification failed") {
+        "SSH 登录失败: 主机密钥验证失败".to_string()
+    } else if stderr.contains("No such file or directory") && stderr.contains("identity file") {
+        "SSH 登录失败: 密钥文件不存在".to_string()
+    } else {
+        // 提取第一行错误信息
+        let first_line = stderr.lines().next().unwrap_or("未知错误");
+        format!("SSH 登录失败: {}", first_line)
+    }
+}
