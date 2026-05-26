@@ -428,7 +428,11 @@ pub async fn test_ssh_connection(request: TestConnectionRequest) -> Result<TestC
     // 构建最终结果
     let success = ssh_result.success;
     let message = if success {
-        "连接测试成功".to_string()
+        if request.auth_type == "password" {
+            "TCP 连通性已验证，SSH 端口可达".to_string()
+        } else {
+            "连接测试成功".to_string()
+        }
     } else {
         ssh_result.message.clone()
     };
@@ -458,6 +462,14 @@ fn test_ssh_login(request: &TestConnectionRequest) -> TestStepResult {
     let port = request.port;
     let username = &request.username;
     let auth_type = &request.auth_type;
+
+    // 密码认证无法通过 BatchMode 测试，直接返回提示
+    if auth_type == "password" {
+        return TestStepResult {
+            success: true,
+            message: "TCP 连通性已验证，密码认证需要实际登录测试（不支持非交互式验证）".to_string(),
+        };
+    }
 
     // 输入验证：防止参数注入
     if host.contains("-o") || host.contains(' ') || host.contains('\t') {
