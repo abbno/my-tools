@@ -459,23 +459,56 @@ fn test_ssh_login(request: &TestConnectionRequest) -> TestStepResult {
     let username = &request.username;
     let auth_type = &request.auth_type;
 
-    // 构建 SSH 命令参数
-    let mut args = vec![
-        "-o".to_string(), "BatchMode=yes".to_string(),
-        "-o".to_string(), "ConnectTimeout=10".to_string(),
-        "-o".to_string(), "StrictHostKeyChecking=accept-new".to_string(),
-        "-p".to_string(), port.to_string(),
-        format!("{}@{}", username, host),
-        "exit".to_string(), // 执行 exit 命令，成功登录后立即退出
-    ];
+    // 输入验证：防止参数注入
+    if host.contains("-o") || host.contains(' ') || host.contains('\t') {
+        return TestStepResult {
+            success: false,
+            message: "主机地址格式无效，不能包含空格或 SSH 选项".to_string()
+        };
+    }
+    if username.contains("-o") || username.contains(' ') || username.contains('\t') {
+        return TestStepResult {
+            success: false,
+            message: "用户名格式无效，不能包含空格或 SSH 选项".to_string()
+        };
+    }
+
+    // 端口范围验证
+    if port < 1 || port > 65535 {
+        return TestStepResult {
+            success: false,
+            message: format!("端口范围无效: {} (应在 1-65535)", port)
+        };
+    }
+
+    // 顺序构建 SSH 命令参数
+    let mut args = Vec::new();
 
     // 密钥认证：添加密钥路径
     if auth_type == "key" {
         if let Some(key_path) = &request.key_path {
-            args.insert(0, "-i".to_string());
-            args.insert(1, key_path.clone());
+            args.push("-i".to_string());
+            args.push(key_path.clone());
         }
     }
+
+    // SSH 选项
+    args.push("-o".to_string());
+    args.push("BatchMode=yes".to_string());
+    args.push("-o".to_string());
+    args.push("ConnectTimeout=10".to_string());
+    args.push("-o".to_string());
+    args.push("StrictHostKeyChecking=accept-new".to_string());
+
+    // 端口
+    args.push("-p".to_string());
+    args.push(port.to_string());
+
+    // 用户名和主机
+    args.push(format!("{}@{}", username, host));
+
+    // 执行 exit 命令
+    args.push("exit".to_string());
 
     // Windows: 隐藏窗口
     #[cfg(target_os = "windows")]
@@ -503,7 +536,6 @@ fn test_ssh_login(request: &TestConnectionRequest) -> TestStepResult {
                     message: format!("SSH 登录认证成功 ({}认证)", auth_type)
                 }
             } else {
-                // 解析错误信息
                 let stderr = String::from_utf8_lossy(&output.stderr);
                 let error_msg = parse_ssh_error(&stderr);
                 TestStepResult { success: false, message: error_msg }
