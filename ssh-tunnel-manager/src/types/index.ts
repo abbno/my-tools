@@ -163,49 +163,15 @@ export interface SaveAppSettingRequest {
 // SSH 连接测试类型定义
 // ============================================
 
-// 测试请求接口
-export interface TestConnectionRequest {
-  host: string
-  port: number
-  username: string
-  authType: string
-  password?: string
-  keyPath?: string
-  keyPassphrase?: string
-  localHost: string
-  localPort: number
-}
-
-// 单步测试结果接口
-export interface TestStepResult {
-  success: boolean
-  message: string
-}
-
-// 测试详情接口
-export interface TestDetails {
-  localPort: TestStepResult
-  tcpConnectivity: TestStepResult
-  sshLogin: TestStepResult
-}
-
-// 测试结果接口
-export interface TestConnectionResult {
-  success: boolean
-  message: string
-  details: TestDetails
-}
-
 // ============================================
 // SSH 密钥设置类型定义
 // ============================================
 
-// 密钥设置请求接口
+// 密钥设置请求接口（用户在 CMD 窗口中输入密码）
 export interface SetupKeyRequest {
   host: string
   port: number
   username: string
-  password: string
 }
 
 // 密钥设置结果接口

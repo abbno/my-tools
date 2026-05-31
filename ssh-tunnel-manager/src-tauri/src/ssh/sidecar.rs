@@ -8,6 +8,7 @@ use tauri::Emitter;
 
 use crate::db;
 use crate::models::{Config, ConnectionLog, LogAction, TunnelInfo, TunnelStatus, TunnelType};
+use crate::utils::logger;
 
 use super::{APP_HANDLE, TUNNELS};
 
@@ -258,9 +259,16 @@ pub fn start_ssh_tunnel(config: &Config) -> Result<TunnelInfo, String> {
         tunnels.remove(&config.id);
     }
 
+    logger::info(&format!(
+        "开始建立 SSH 隧道: {} ({}@{}:{})",
+        config.name, config.username, config.host, config.port
+    ));
+
     // 检查远程主机连通性（2秒超时）
     if let Err(e) = check_remote_connectivity(&config.host, config.port, 2) {
         let error_msg = format!("远程主机连接失败: {}", e);
+        logger::error(&format!("SSH 隧道启动失败 [{}]: {}", config.name, error_msg));
+        log_connection(&config.id, LogAction::Error, error_msg.clone());
         super::send_notification("SSH 隧道连接失败", &format!("{}: {}", config.name, error_msg));
         emit_error_status(&config.id, &error_msg);
         return Err(error_msg);
@@ -277,6 +285,8 @@ pub fn start_ssh_tunnel(config: &Config) -> Result<TunnelInfo, String> {
             format!("本地端口 {}:{} 已被占用", config.local_host, config.local_port)
         };
 
+        logger::error(&format!("SSH 隧道启动失败 [{}]: {}", config.name, error_msg));
+        log_connection(&config.id, LogAction::Error, error_msg.clone());
         super::send_notification("SSH 隧道连接失败", &format!("{}: {}", config.name, error_msg));
         emit_error_status(&config.id, &error_msg);
 
@@ -301,6 +311,8 @@ pub fn start_ssh_tunnel(config: &Config) -> Result<TunnelInfo, String> {
             .spawn()
             .map_err(|e| {
                 let error_msg = format!("启动 SSH 进程失败: {}", e);
+                logger::error(&format!("SSH 隧道启动失败 [{}]: {}", config.name, error_msg));
+                log_connection(&config.id, LogAction::Error, error_msg.clone());
                 super::send_notification("SSH 隧道连接失败", &format!("{}: {}", config.name, error_msg));
                 error_msg
             })?
@@ -316,6 +328,8 @@ pub fn start_ssh_tunnel(config: &Config) -> Result<TunnelInfo, String> {
             .spawn()
             .map_err(|e| {
                 let error_msg = format!("启动 SSH 进程失败: {}", e);
+                logger::error(&format!("SSH 隧道启动失败 [{}]: {}", config.name, error_msg));
+                log_connection(&config.id, LogAction::Error, error_msg.clone());
                 super::send_notification("SSH 隧道连接失败", &format!("{}: {}", config.name, error_msg));
                 error_msg
             })?
@@ -344,6 +358,7 @@ pub fn start_ssh_tunnel(config: &Config) -> Result<TunnelInfo, String> {
     }
 
     // 记录连接日志
+    logger::info(&format!("SSH 隧道启动成功 [{}] (PID: {})", config.name, pid));
     log_connection(&config.id, LogAction::Connect, format!("SSH 隧道已启动 (PID: {})", pid));
 
     // 发送事件通知

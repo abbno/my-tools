@@ -9,10 +9,7 @@
   >
     <template #footer>
       <div style="display: flex; gap: 8px;">
-        <t-button variant="outline" :loading="testing" @click="handleTest">
-          测试连接
-        </t-button>
-        <t-button theme="primary" :loading="saving" @click="handleSubmit">
+        <t-button theme="primary" @click="handleSubmit">
           保存
         </t-button>
         <t-button variant="text" @click="handleClose">
@@ -81,48 +78,6 @@
           clearable
         />
       </t-form-item>
-
-      <!-- 认证方式 -->
-      <t-divider>认证方式</t-divider>
-
-      <t-form-item label="认证类型" name="authType">
-        <t-radio-group v-model="formData.authType">
-          <t-radio value="password">密码认证</t-radio>
-          <t-radio value="key">密钥认证</t-radio>
-        </t-radio-group>
-      </t-form-item>
-
-      <!-- 密码认证 -->
-      <template v-if="formData.authType === 'password'">
-        <t-form-item label="密码" name="password">
-          <t-input
-            v-model="formData.password"
-            type="password"
-            placeholder="请输入 SSH 密码"
-            clearable
-          />
-        </t-form-item>
-      </template>
-
-      <!-- 密钥认证 -->
-      <template v-if="formData.authType === 'key'">
-        <t-form-item label="密钥文件" name="keyPath">
-          <t-input
-            v-model="formData.keyPath"
-            placeholder="密钥文件路径，例如: ~/.ssh/id_rsa"
-            clearable
-          />
-        </t-form-item>
-
-        <t-form-item label="密钥密码" name="keyPassphrase">
-          <t-input
-            v-model="formData.keyPassphrase"
-            type="password"
-            placeholder="密钥密码（如有）"
-            clearable
-          />
-        </t-form-item>
-      </template>
 
       <!-- 隧道配置 -->
       <t-divider>隧道配置</t-divider>
@@ -211,11 +166,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import type { FormInstanceFunctions, FormRule } from 'tdesign-vue-next'
-import type { Config, AuthType, TunnelType, CreateConfigRequest, UpdateConfigRequest, TestConnectionRequest } from '@/types'
-import { useConfigStore } from '@/stores/config'
+import type { Config, TunnelType } from '@/types'
 import { useGroupStore } from '@/stores/group'
-import { MessagePlugin } from 'tdesign-vue-next'
-import { testSshConnection } from '@/api'
+import { useKeySetupStore } from '@/stores/keySetup'
 
 // Props
 const props = defineProps<{
@@ -231,17 +184,11 @@ const emit = defineEmits<{
 }>()
 
 // Stores
-const configStore = useConfigStore()
 const groupStore = useGroupStore()
+const keySetupStore = useKeySetupStore()
 
 // 表单引用
 const formRef = ref<FormInstanceFunctions>()
-
-// 保存状态
-const saving = ref(false)
-
-// 测试状态
-const testing = ref(false)
 
 // 是否为编辑模式
 const isEditMode = computed(() => !!props.config?.id)
@@ -253,10 +200,6 @@ const defaultFormData = () => ({
   host: '',
   port: 22,
   username: '',
-  authType: 'password' as AuthType,
-  password: '',
-  keyPath: '',
-  keyPassphrase: '',
   tunnelType: 'local' as TunnelType,
   localHost: '127.0.0.1',
   localPort: 8080,
@@ -285,30 +228,6 @@ const formRules: Record<string, FormRule[]> = {
   ],
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' }
-  ],
-  password: [
-    {
-      required: true,
-      trigger: 'blur',
-      validator: (val: string) => {
-        if (formData.value.authType === 'password' && !val) {
-          return { result: false, message: '请输入密码', type: 'error' }
-        }
-        return { result: true, message: '' }
-      }
-    }
-  ],
-  keyPath: [
-    {
-      required: true,
-      trigger: 'blur',
-      validator: (val: string) => {
-        if (formData.value.authType === 'key' && !val) {
-          return { result: false, message: '请输入密钥文件路径', type: 'error' }
-        }
-        return { result: true, message: '' }
-      }
-    }
   ],
   localPort: [
     { required: true, message: '请输入本地端口', trigger: 'blur' }
@@ -378,10 +297,6 @@ function fillFormData(config: Config | null | undefined) {
       host: config.host,
       port: config.port,
       username: config.username,
-      authType: config.authType,
-      password: config.password || '',
-      keyPath: config.keyPath || '',
-      keyPassphrase: config.keyPassphrase || '',
       tunnelType: config.tunnelType,
       localHost: config.localHost,
       localPort: config.localPort,
@@ -400,103 +315,16 @@ function fillFormData(config: Config | null | undefined) {
   }
 }
 
-// 构建测试请求
-function buildTestRequest(): TestConnectionRequest {
-  return {
-    host: formData.value.host.trim(),
-    port: formData.value.port,
-    username: formData.value.username.trim(),
-    authType: formData.value.authType,
-    password: formData.value.authType === 'password' ? formData.value.password : undefined,
-    keyPath: formData.value.authType === 'key' ? formData.value.keyPath?.trim() : undefined,
-    keyPassphrase: formData.value.authType === 'key' ? formData.value.keyPassphrase : undefined,
-    localHost: formData.value.localHost.trim(),
-    localPort: formData.value.localPort,
-  }
-}
-
-// 处理测试
-async function handleTest(): Promise<void> {
-  // 先验证必填字段
-  const valid = await formRef.value?.validate()
-  if (valid !== true) {
-    MessagePlugin.warning('请先填写必填信息')
-    return
-  }
-
-  testing.value = true
-  try {
-    const result = await testSshConnection(buildTestRequest())
-    if (result.success) {
-      MessagePlugin.success('连接测试成功')
-    } else {
-      MessagePlugin.error(result.message)
-    }
-  } catch (error) {
-    MessagePlugin.error('测试请求失败: ' + (error as string))
-  } finally {
-    testing.value = false
-  }
-}
-
-// 处理提交
+// 处理提交：触发密钥设置流程
 async function handleSubmit(): Promise<boolean> {
   const valid = await formRef.value?.validate()
   if (valid !== true) {
     return false
   }
 
-  saving.value = true
-  try {
-    // 构建请求数据
-    const requestData: CreateConfigRequest | UpdateConfigRequest = {
-      name: formData.value.name.trim(),
-      groupId: formData.value.groupId,
-      host: formData.value.host.trim(),
-      port: formData.value.port,
-      username: formData.value.username.trim(),
-      authType: formData.value.authType,
-      password: formData.value.authType === 'password' ? formData.value.password : null,
-      keyPath: formData.value.authType === 'key' ? formData.value.keyPath.trim() : null,
-      keyPassphrase: formData.value.authType === 'key' && formData.value.keyPassphrase
-        ? formData.value.keyPassphrase
-        : null,
-      tunnelType: formData.value.tunnelType,
-      localHost: formData.value.localHost.trim(),
-      localPort: formData.value.localPort,
-      remoteHost: formData.value.tunnelType !== 'dynamic' ? formData.value.remoteHost?.trim() || null : null,
-      remotePort: formData.value.tunnelType !== 'dynamic' ? formData.value.remotePort : null,
-      autoReconnect: formData.value.autoReconnect,
-      reconnectInterval: formData.value.reconnectInterval,
-      isFavorite: formData.value.isFavorite,
-      autoStart: formData.value.autoStart
-    }
-
-    let savedConfig: Config
-
-    if (isEditMode.value && props.config?.id) {
-      // 更新配置
-      savedConfig = await configStore.updateConfig({
-        ...requestData,
-        id: props.config.id
-      } as UpdateConfigRequest)
-      MessagePlugin.success('配置更新成功')
-    } else {
-      // 创建配置
-      savedConfig = await configStore.createConfig(requestData as CreateConfigRequest)
-      MessagePlugin.success('配置创建成功')
-    }
-
-    emit('saved', savedConfig)
-    handleClose()
-    return true
-  } catch (error) {
-    console.error('保存配置失败:', error)
-    MessagePlugin.error(isEditMode.value ? '配置更新失败' : '配置创建失败')
-    return false
-  } finally {
-    saving.value = false
-  }
+  // 触发密钥设置对话框
+  keySetupStore.showKeySetupDialog(formData.value, props.config?.id)
+  return false // 不关闭表单，等待密钥设置完成
 }
 
 // 处理关闭

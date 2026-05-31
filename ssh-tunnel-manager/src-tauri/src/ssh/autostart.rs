@@ -4,6 +4,7 @@ use tauri::AppHandle;
 
 use crate::db;
 use crate::ssh::{start_ssh_tunnel, start_monitor_with_defaults};
+use crate::utils::logger;
 
 /// 重试任务
 #[derive(Clone)]
@@ -50,9 +51,11 @@ pub fn start_auto_start_tunnels(app: &AppHandle) {
             Ok(_) => {
                 // 启动监控
                 start_monitor_with_defaults(config_id.clone(), auto_reconnect, reconnect_interval);
+                logger::info(&format!("开机启动隧道成功: {}", config.name));
                 println!("隧道 {} 启动成功", config.name);
             }
             Err(e) => {
+                logger::error(&format!("开机启动隧道失败 [{}]: {}，加入重试队列", config.name, e));
                 println!("隧道 {} 启动失败: {}，加入重试队列", config.name, e);
                 // 加入重试队列
                 let mut queue = RETRY_QUEUE.lock().unwrap();
@@ -102,9 +105,11 @@ fn spawn_retry_task(_app: AppHandle) {
                     match result {
                         Ok(_) => {
                             start_monitor_with_defaults(cfg.id.clone(), cfg.auto_reconnect, cfg.reconnect_interval);
+                            logger::info(&format!("开机启动隧道重试成功: {}", cfg.name));
                             println!("隧道 {} 重试启动成功", cfg.name);
                         }
                         Err(e) => {
+                            logger::error(&format!("开机启动隧道重试失败 [{}] (第 {} 次): {}", cfg.name, task.retry_count + 1, e));
                             println!("隧道 {} 重试启动失败 (第 {} 次): {}", cfg.name, task.retry_count + 1, e);
                             // 重新加入队列，增加计数
                             queue.insert(task.config_id.clone(), RetryTask {

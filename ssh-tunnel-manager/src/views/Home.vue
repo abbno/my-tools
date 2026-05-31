@@ -72,12 +72,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import type { Config } from '@/types'
 import { useGroupStore } from '@/stores/group'
 import { useConfigStore } from '@/stores/config'
 import { useTunnelStore } from '@/stores/tunnel'
+import { useKeySetupStore } from '@/stores/keySetup'
 import * as api from '@/api/tauri'
 
 // 组件
@@ -90,10 +91,19 @@ import LogPanel from '@/components/LogPanel.vue'
 const groupStore = useGroupStore()
 const configStore = useConfigStore()
 const tunnelStore = useTunnelStore()
+const keySetupStore = useKeySetupStore()
 
 // 配置表单状态
 const showConfigForm = ref(false)
 const editingConfig = ref<Config | null>(null)
+
+// 密钥设置完成后关闭配置表单
+watch(() => keySetupStore.signalCloseForm, (val) => {
+  if (val) {
+    showConfigForm.value = false
+    keySetupStore.signalCloseForm = false
+  }
+})
 
 // 当前选中的分组ID（用于新建配置时的默认分组）
 const currentGroupId = computed(() => configStore.selectedGroupId)

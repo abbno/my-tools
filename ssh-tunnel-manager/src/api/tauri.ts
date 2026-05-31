@@ -11,8 +11,6 @@ import type {
   ConnectionLog,
   TunnelInfo,
   UpdateInfo,
-  TestConnectionRequest,
-  TestConnectionResult,
   SetupKeyRequest,
   SetupKeyResult,
 } from '@/types'
@@ -576,38 +574,31 @@ export async function deleteAppSetting(key: string): Promise<void> {
 // SSH 连接测试 API
 // ============================================
 
-/**
- * 测试 SSH 连接配置
- */
-export async function testSshConnection(request: TestConnectionRequest): Promise<TestConnectionResult> {
-  // 转换为后端期望的 snake_case 格式
-  const dto = {
-    host: request.host,
-    port: request.port,
-    username: request.username,
-    auth_type: request.authType,
-    password: request.password,
-    key_path: request.keyPath,
-    key_passphrase: request.keyPassphrase,
-    local_host: request.localHost,
-    local_port: request.localPort,
-  }
-  return await invoke<TestConnectionResult>('test_ssh_connection', { request: dto })
-}
 
 // ============================================
 // SSH 密钥设置 API
 // ============================================
 
+// 密钥设置结果 DTO（后端返回格式）
+interface SetupKeyResultDto {
+  success: boolean
+  key_path: string | null
+  message: string
+}
+
 /**
- * 设置 SSH 密钥（密码认证转密钥认证）
+ * 设置 SSH 密钥（弹出 CMD 窗口让用户输入密码）
  */
 export async function setupSshKey(request: SetupKeyRequest): Promise<SetupKeyResult> {
   const dto = {
     host: request.host,
     port: request.port,
     username: request.username,
-    password: request.password,
   }
-  return await invoke<SetupKeyResult>('setup_ssh_key', { request: dto })
+  const result = await invoke<SetupKeyResultDto>('setup_ssh_key', { request: dto })
+  return {
+    success: result.success,
+    keyPath: result.key_path,
+    message: result.message,
+  }
 }

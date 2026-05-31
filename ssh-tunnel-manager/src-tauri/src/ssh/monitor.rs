@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use crate::db;
 use crate::models::{LogAction, TunnelStatus};
+use crate::utils::logger;
 
 use super::sidecar::{is_process_running, is_port_in_use, build_ssh_args, log_connection_async, SSH_PROCESSES};
 use super::{TUNNELS, MONITOR_HANDLES};
@@ -83,6 +84,7 @@ pub fn start_monitor(config_id: String, monitor_config: MonitorConfig) {
 
                         // 尝试重连
                         if let Err(e) = attempt_reconnect(&config_id_clone).await {
+                            logger::error(&format!("SSH 隧道自动重连失败 [{}]: {}", config_id_clone, e));
                             log_connection_async(config_id_clone.clone(), LogAction::Error,
                                 format!("自动重连失败 (尝试 {}): {}", reconnect_attempts, e)).await;
                         } else {
@@ -183,6 +185,7 @@ async fn attempt_reconnect(config_id: &str) -> Result<(), String> {
 
     // 构建并启动 SSH
     let args = build_ssh_args(&config);
+    logger::info(&format!("开始自动重连 SSH 隧道: {} ({}@{}:{})", config.name, config.username, config.host, config.port));
 
     #[cfg(target_os = "windows")]
     let child = {
@@ -195,7 +198,11 @@ async fn attempt_reconnect(config_id: &str) -> Result<(), String> {
             .stderr(std::process::Stdio::piped())
             .creation_flags(CREATE_NO_WINDOW)
             .spawn()
-            .map_err(|e| format!("启动 SSH 进程失败: {}", e))?
+            .map_err(|e| {
+                let error_msg = format!("启动 SSH 进程失败: {}", e);
+                logger::error(&format!("SSH 隧道自动重连失败 [{}]: {}", config.name, error_msg));
+                error_msg
+            })?
     };
 
     #[cfg(not(target_os = "windows"))]
@@ -206,7 +213,11 @@ async fn attempt_reconnect(config_id: &str) -> Result<(), String> {
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
-            .map_err(|e| format!("启动 SSH 进程失败: {}", e))?
+            .map_err(|e| {
+                let error_msg = format!("启动 SSH 进程失败: {}", e);
+                logger::error(&format!("SSH 隧道自动重连失败 [{}]: {}", config.name, error_msg));
+                error_msg
+            })?
     };
 
     let pid = child.id();
@@ -228,6 +239,7 @@ async fn attempt_reconnect(config_id: &str) -> Result<(), String> {
     }
 
     // 记录重连日志
+    logger::info(&format!("SSH 隧道自动重连成功 [{}] (PID: {})", config.name, pid));
     log_connection_async(config_id.to_string(), LogAction::Reconnect, format!("SSH 隧道已重连 (PID: {})", pid)).await;
 
     // 发送状态变化事件

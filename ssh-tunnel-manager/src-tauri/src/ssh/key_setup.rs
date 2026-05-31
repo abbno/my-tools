@@ -10,13 +10,12 @@ use ssh_key::{PrivateKey, Algorithm};
 
 use crate::utils::logger;
 
-/// 密钥设置请求
+/// 密钥设置请求（不再需要密码，用户在 CMD 窗口中输入）
 #[derive(Debug, Deserialize)]
 pub struct SetupKeyRequest {
     pub host: String,
     pub port: i32,
     pub username: String,
-    pub password: String,
 }
 
 /// 密钥设置结果
@@ -107,103 +106,203 @@ pub fn generate_ed25519_key(key_path: &PathBuf) -> Result<String, String> {
     Ok(public_openssh.to_string())
 }
 
-/// 使用 SSH 命令部署公钥（Windows 使用 PowerShell 方式）
+/// 使用 PowerShell 窗口部署公钥（Windows）- 用户交互输入密码
 #[cfg(target_os = "windows")]
-pub fn deploy_public_key(
+pub fn deploy_public_key_cmd(
     host: &str,
     port: i32,
     username: &str,
-    password: &str,
     public_key: &str,
 ) -> Result<(), String> {
+    use std::process::Command;
+
+    logger::info(&format!("弹出 PowerShell 窗口部署公钥到 {}@{}:{} ...", username, host, port));
+
+    let temp_dir = std::env::temp_dir();
+    let temp_ps1 = temp_dir.join("deploy_ssh_key.ps1");
+    let ps1_path_str = temp_ps1.to_string_lossy().to_string();
+
+    // 公钥嵌入本地 PS 脚本，远程命令用 @'...'@ 单引号 here-string 构建
+    let pubkey = public_key.trim().replace('\'', "''");
+    let ps1_content = format!(
+        "$ErrorActionPreference = 'Stop'\r\n\
+# ---- 远程命令（@'...'@ = PS 单引号 here-string）----\r\n\
+$remote = @'\r\n\
+# 1. 写入用户 authorized_keys（始终成功）\r\n\
+$ukDir = \"$env:USERPROFILE\\.ssh\"\r\n\
+$uk = \"$ukDir\\authorized_keys\"\r\n\
+if(!(Test-Path $ukDir)){{ New-Item -ItemType Directory $ukDir -Force | Out-Null }}\r\n\
+Add-Content $uk '{pubkey}'\r\n\
+Write-Host \"[OK] Key written to user authorized_keys\"\r\n\
+# 2. 尝试写入管理员 authorized_keys（可能被权限拒绝，正常）\r\n\
+$akDir = \"$env:ProgramData\\ssh\"\r\n\
+if(Test-Path $akDir){{\r\n\
+    try {{\r\n\
+        Add-Content \"$akDir\\administrators_authorized_keys\" '{pubkey}' -ErrorAction Stop\r\n\
+        icacls \"$akDir\\administrators_authorized_keys\" /inheritance:r /grant \"SYSTEM:(R)\" /grant \"BUILTIN\\Administrators:(R)\" 2>$null\r\n\
+        Write-Host \"[OK] Admin authorized_keys written + ACL fixed\"\r\n\
+    }} catch {{\r\n\
+        Write-Host \"[INFO] Cannot write admin authorized_keys (expected for non-elevated SSH)\"\r\n\
+        Write-Host \"[INFO] Key is already in user profile's authorized_keys\"\r\n\
+    }}\r\n\
+}} else {{\r\n\
+    Write-Host \"[OK] Linux/compat server - user authorized_keys is sufficient\"\r\n\
+}}\r\n\
+exit 0\r\n\
+'@\r\n\
+$encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($remote))\r\n\
+Write-Host '========================================'\r\n\
+Write-Host 'Deploying SSH key to {username}@{host}:{port}'\r\n\
+Write-Host '========================================'\r\n\
+Write-Host ''\r\n\
+Write-Host 'Please enter your server password when prompted:'\r\n\
+Write-Host ''\r\n\
+ssh -o StrictHostKeyChecking=accept-new -p {port} {username}@{host} \"powershell -EncodedCommand $encoded\"\r\n\
+Write-Host ''\r\n\
+Write-Host 'Deployment complete. Press any key to close...' -ForegroundColor Yellow\r\n\
+$null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')\r\n\
+Remove-Item -Force '{ps1_path}' -ErrorAction SilentlyContinue\r\n",
+        pubkey = pubkey,
+        username = username,
+        host = host,
+        port = port,
+        ps1_path = ps1_path_str.replace('\'', "''"),
+    );
+
+    fs::write(&temp_ps1, ps1_content.as_bytes())
+        .map_err(|e| format!("写入脚本文件失败: {}", e))?;
+
+    logger::info(&format!("PowerShell 脚本路径: {}", ps1_path_str));
+
+    // Start-Process 弹出新窗口，-Wait 等待用户关闭
+    let status = Command::new("powershell")
+        .args([
+            "-NoProfile", "-ExecutionPolicy", "Bypass",
+            "-Command",
+            &format!("Start-Process powershell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -File \"{}\"' -Wait", ps1_path_str),
+        ])
+        .status()
+        .map_err(|e| format!("启动 PowerShell 失败: {}", e))?;
+
+    let _ = fs::remove_file(&temp_ps1);
+
+    logger::info(&format!("PowerShell 窗口已关闭 (status: {})", status));
+    Ok(())
+}
+
+/// 验证密钥是否已成功部署到服务器，返回 (success, error_detail)
+#[cfg(target_os = "windows")]
+pub fn verify_key_deployment(
+    host: &str,
+    port: i32,
+    username: &str,
+    key_path: &PathBuf,
+) -> Result<(bool, String), String> {
     use std::process::Command;
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
 
-    logger::info(&format!("开始部署公钥到 {}@{}:{} ...", username, host, port));
+    logger::info(&format!("验证密钥部署: {}@{}:{} using key {}", username, host, port, key_path.display()));
 
-    // 创建临时 PowerShell 脚本文件来处理密码传递
-    // 因为 SSH 不接受命令行密码输入
-
-    let temp_script = std::env::temp_dir().join("deploy_ssh_key.ps1");
-    // PowerShell here-string 格式
-    let script_content = format!(
-r#"
-$password = '{password}'
-$pubkey = '{pubkey}'
-$host = '{host}'
-$port = '{port}'
-$user = '{user}'
-
-$cmd = "mkdir -p ~/.ssh; chmod 700 ~/.ssh; echo `$pubkey >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys"
-echo $password | ssh -o StrictHostKeyChecking=accept-new -o PreferredAuthentications=password -o PubkeyAuthentication=no -p $port $user@$host $cmd
-"#,
-        password = password,
-        pubkey = public_key,
-        host = host,
-        port = port,
-        user = username
-    );
-
-    fs::write(&temp_script, &script_content)
-        .map_err(|e| format!("写入临时脚本失败: {}", e))?;
-
-    let output = Command::new("powershell")
-        .args(["-ExecutionPolicy", "Bypass", "-File", &temp_script.to_string_lossy()])
+    let output = Command::new("ssh")
+        .args(["-i", &key_path.to_string_lossy()])
+        .args(["-o", "BatchMode=yes"])
+        .args(["-o", "StrictHostKeyChecking=accept-new"])
+        .args(["-o", "ConnectTimeout=10"])
+        .args(["-p", &port.to_string()])
+        .arg(format!("{}@{}", username, host))
+        .arg("exit")
         .creation_flags(CREATE_NO_WINDOW)
         .output()
-        .map_err(|e| format!("执行 PowerShell 失败: {}", e))?;
+        .map_err(|e| format!("验证命令执行失败: {}", e))?;
 
-    // 删除临时脚本
-    fs::remove_file(&temp_script).ok();
-
-    if !output.status.success() {
+    if output.status.success() {
+        logger::info("密钥验证成功");
+        Ok((true, String::new()))
+    } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("部署公钥失败: {}", stderr));
+        let detail = parse_ssh_error_for_verify(&stderr);
+        logger::info(&format!("密钥验证失败: {} → {}", stderr.trim(), detail));
+        Ok((false, detail))
     }
-
-    logger::info("公钥部署成功");
-    Ok(())
 }
 
-/// 使用 sshpass 部署公钥（Linux/Mac）
+/// 解析验证失败时的 SSH 错误信息
+fn parse_ssh_error_for_verify(stderr: &str) -> String {
+    let s = stderr.trim();
+    if s.is_empty() {
+        return "SSH 服务器拒绝了密钥认证：请确认密钥已正确部署到服务器".to_string();
+    }
+    if s.contains("Permission denied") || s.contains("publickey") {
+        return "密钥认证被拒绝：密钥未在服务器上注册，或部署到了错误的位置".to_string();
+    }
+    if s.contains("Host key verification failed") {
+        return "主机密钥验证失败".to_string();
+    }
+    if s.contains("Connection timed out") || s.contains("connect to host") {
+        return format!("无法连接到服务器: {}", s.lines().next().unwrap_or(s));
+    }
+    s.lines().next().unwrap_or("未知验证错误").to_string()
+}
+
+/// Linux/Mac 实现（使用 sshpass 或类似方法）
 #[cfg(not(target_os = "windows"))]
-pub fn deploy_public_key(
+pub fn deploy_public_key_cmd(
     host: &str,
     port: i32,
     username: &str,
-    password: &str,
     public_key: &str,
 ) -> Result<(), String> {
+    // Linux/Mac 可以使用终端交互方式
     use std::process::Command;
 
-    logger::info(&format!("开始部署公钥到 {}@{}:{} ...", username, host, port));
+    logger::info(&format!("弹出终端部署公钥到 {}@{}:{} ...", username, host, port));
 
-    // 使用 sshpass 传递密码
-    let ssh_target = format!("{}@{}:{}", username, host, port);
-    let cmd = format!(
-        "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo '{}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys",
-        public_key
+    let ssh_cmd = format!(
+        "ssh -o StrictHostKeyChecking=accept-new -p {} {}@{} \"mkdir -p ~/.ssh; chmod 700 ~/.ssh; echo '{}' >> ~/.ssh/authorized_keys; chmod 600 ~/.ssh/authorized_keys\"",
+        port, username, host, public_key
     );
 
-    let output = Command::new("sshpass")
-        .args(["-p", password])
-        .args(["ssh", "-o", "StrictHostKeyChecking=accept-new"])
-        .args(["-o", "PreferredAuthentications=password"])
-        .args(["-o", "PubkeyAuthentication=no"])
-        .args(["-p", &port.to_string()])
-        .arg(&ssh_target)
-        .arg(&cmd)
-        .output()
-        .map_err(|e| format!("执行 sshpass 失败: {} (请确保已安装 sshpass)", e))?;
+    // 使用 x-terminal-emulator 或 gnome-terminal 等
+    let status = Command::new("x-terminal-emulator")
+        .args(["-e", &ssh_cmd])
+        .status()
+        .map_err(|e| format!("启动终端失败: {} (请确保有终端模拟器)", e))?;
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("部署公钥失败: {}", stderr));
-    }
-
-    logger::info("公钥部署成功");
+    logger::info(&format!("终端已关闭 (status: {})", status));
     Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn verify_key_deployment(
+    host: &str,
+    port: i32,
+    username: &str,
+    key_path: &PathBuf,
+) -> Result<(bool, String), String> {
+    use std::process::Command;
+
+    logger::info(&format!("验证密钥部署: {}@{}:{} using key {}", username, host, port, key_path.display()));
+
+    let output = Command::new("ssh")
+        .args(["-i", &key_path.to_string_lossy()])
+        .args(["-o", "BatchMode=yes"])
+        .args(["-o", "StrictHostKeyChecking=accept-new"])
+        .args(["-o", "ConnectTimeout=10"])
+        .args(["-p", &port.to_string()])
+        .arg(format!("{}@{}", username, host))
+        .arg("exit")
+        .output()
+        .map_err(|e| format!("验证命令执行失败: {}", e))?;
+
+    if output.status.success() {
+        logger::info("密钥验证成功");
+        Ok((true, String::new()))
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        logger::info(&format!("密钥验证失败: {}", stderr));
+        Ok((false, stderr.trim().to_string()))
+    }
 }
 
 /// 完整的密钥设置流程
@@ -213,14 +312,13 @@ pub async fn setup_ssh_key(request: SetupKeyRequest) -> Result<SetupKeyResult, S
         request.username, request.host, request.port
     ));
 
-    // 1. 检查现有密钥
+    // 1. 检查现有密钥或生成新密钥
     let key_path = match check_existing_key() {
         Some(path) => {
             logger::info("使用已有密钥");
             path
         }
         None => {
-            // 2. 生成新密钥
             let path = get_default_key_path()?;
             generate_ed25519_key(&path)?;
             path
@@ -232,20 +330,54 @@ pub async fn setup_ssh_key(request: SetupKeyRequest) -> Result<SetupKeyResult, S
     let public_key = fs::read_to_string(&public_path)
         .map_err(|e| format!("读取公钥失败: {}", e))?;
 
-    // 3. 部署公钥到服务器（同步操作）
-    deploy_public_key(
+    // 2. 弹出 CMD 窗口让用户输入密码部署公钥
+    deploy_public_key_cmd(
         &request.host,
         request.port,
         &request.username,
-        &request.password,
         &public_key
     )?;
 
-    logger::info(&format!("密钥设置完成: {}", key_path.display()));
+    // 3. 验证密钥是否部署成功
+    let (verified, verify_detail) = verify_key_deployment(
+        &request.host,
+        request.port,
+        &request.username,
+        &key_path
+    )?;
 
-    Ok(SetupKeyResult {
-        success: true,
-        key_path: Some(key_path.to_string_lossy().to_string()),
-        message: "密钥设置成功，配置已自动更新为密钥认证".to_string(),
-    })
+    if verified {
+        logger::info(&format!("密钥设置完成: {}", key_path.display()));
+        Ok(SetupKeyResult {
+            success: true,
+            key_path: Some(key_path.to_string_lossy().to_string()),
+            message: "密钥设置成功，配置已自动更新为密钥认证".to_string(),
+        })
+    } else {
+        // 验证失败，给出针对性提示
+        #[allow(unused_parens)]
+        let detail_info = (if verify_detail.contains("publickey") || verify_detail.contains("Permission denied") {
+            let pk = public_key.trim();
+            format!(
+                "管理员账户的 SSH 免密登录需要额外配置。\n\
+                 方案一（推荐）：在服务器上创建普通用户（非管理员组），使用普通用户连接。\n\
+                 方案二：远程桌面登录服务器，用管理员身份运行以下命令：\n\
+                 ----------------------------------------\n\
+                 Add-Content \"$env:ProgramData\\ssh\\administrators_authorized_keys\" \"{pk}\"\n\
+                 icacls \"$env:ProgramData\\ssh\\administrators_authorized_keys\" /inheritance:r /grant \"SYSTEM:(R)\" /grant \"BUILTIN\\Administrators:(R)\"\n\
+                 ----------------------------------------\n\
+                 或者注释掉 sshd_config 中 Match Group Administrators 相关的行，然后运行 Restart-Service sshd",
+                pk = pk
+            )
+        } else {
+            format!("密钥验证失败: {}", verify_detail)
+        });
+
+        logger::info(&format!("密钥设置验证失败: {}", verify_detail));
+        Ok(SetupKeyResult {
+            success: false,
+            key_path: None,
+            message: detail_info,
+        })
+    }
 }
